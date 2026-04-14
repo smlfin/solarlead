@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar Lead Registration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --sun: #F5A623;
+      --sun-deep: #E8890A;
+      --sky: #0B3954;
+      --sky-light: #1A5276;
+      --leaf: #27AE60;
+      --leaf-glow: #2ECC71;
+      --bg: #F9F5EE;
+      --surface: #FFFFFF;
+      --text: #1C2B2B;
+      --muted: #6B7C7C;
+      --border: #DDE4E4;
+      --error: #E74C3C;
+      --radius: 14px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -120px; right: -120px;
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, rgba(245,166,35,0.18) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -80px; left: -80px;
+      width: 340px; height: 340px;
+      background: radial-gradient(circle, rgba(11,57,84,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page-wrapper {
+      position: relative; z-index: 1;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    .header { text-align: center; margin-bottom: 48px; }
+    .sun-icon {
+      display: inline-flex;
+      align-items: center; justify-content: center;
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, var(--sun), var(--sun-deep));
+      border-radius: 50%;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px rgba(245,166,35,0.35);
+      animation: pulse-sun 3s ease-in-out infinite;
+    }
+    @keyframes pulse-sun {
+      0%, 100% { box-shadow: 0 8px 32px rgba(245,166,35,0.35); }
+      50%       { box-shadow: 0 8px 48px rgba(245,166,35,0.55); }
+    }
+    .sun-icon svg { width: 38px; height: 38px; }
+    h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(28px, 5vw, 40px);
+      color: var(--sky);
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    h1 em { color: var(--sun-deep); font-style: normal; }
+    .subtitle { color: var(--muted); font-size: 15px; font-weight: 300; }
+
+    .card {
+      background: var(--surface);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 4px 40px rgba(11,57,84,0.08), 0 1px 4px rgba(0,0,0,0.04);
+      border: 1px solid rgba(221,228,228,0.6);
+      margin-bottom: 24px;
+      animation: slide-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes slide-up {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .card:nth-child(2) { animation-delay: 0.06s; }
+    .card:nth-child(3) { animation-delay: 0.12s; }
+
+    .section-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      color: var(--sky);
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--bg);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-icon {
+      width: 32px; height: 32px;
+      background: var(--bg);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-1 { display: grid; grid-template-columns: 1fr; gap: 20px; }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label {
+      font-size: 13px; font-weight: 600;
+      color: var(--sky); letter-spacing: 0.03em; text-transform: uppercase;
+    }
+    .field label .req { color: var(--sun-deep); margin-left: 3px; }
+
+    .field input,
+    .field select,
+    .field textarea {
+      padding: 12px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--sun);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(245,166,35,0.12);
+    }
+    .field input.error,
+    .field select.error { border-color: var(--error); }
+    .field-error { font-size: 12px; color: var(--error); display: none; }
+    .field-error.visible { display: block; }
+    .field select {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7C7C' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+    }
+
+    /* ── INCENTIVE WARNING — inline below the bill field ── */
+    .incentive-warning {
+      display: none;
+      margin-top: 8px;
+      background: #FFF8EC;
+      border: 1.5px solid #F5A623;
+      border-radius: 10px;
+      padding: 12px 14px;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .incentive-warning.visible { display: flex; }
+    .incentive-warning-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+    .incentive-warning-text { font-size: 13px; line-height: 1.5; color: #7a4800; }
+    .incentive-warning-text strong { display: block; font-weight: 600; margin-bottom: 2px; }
+
+    /* File Upload */
+    .file-drop {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--bg);
+      position: relative;
+    }
+    .file-drop:hover, .file-drop.dragover {
+      border-color: var(--sun);
+      background: rgba(245,166,35,0.04);
+    }
+    .file-drop input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .file-icon { font-size: 36px; margin-bottom: 10px; display: block; }
+    .file-drop-text { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .file-drop-text strong { color: var(--sky); }
+    .file-chosen {
+      display: none;
+      align-items: center; gap: 12px;
+      background: rgba(39,174,96,0.08);
+      border: 1.5px solid rgba(39,174,96,0.25);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-top: 12px;
+    }
+    .file-chosen.visible { display: flex; }
+    .file-chosen-icon { font-size: 24px; }
+    .file-chosen-name { font-size: 14px; font-weight: 500; color: var(--leaf); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-remove {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 18px; line-height: 1;
+      padding: 2px 6px; border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .file-remove:hover { color: var(--error); background: rgba(231,76,60,0.08); }
+
+    .submit-area { margin-top: 8px; }
+    .btn-submit {
+      width: 100%;
+      padding: 16px 32px;
+      background: linear-gradient(135deg, var(--sky), var(--sky-light));
+      color: white;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px; font-weight: 600;
+      border: none; border-radius: var(--radius); cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      box-shadow: 0 4px 20px rgba(11,57,84,0.3);
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(11,57,84,0.4); }
+    .btn-submit:active:not(:disabled) { transform: translateY(0); }
+    .btn-submit:disabled { opacity: 0.65; cursor: not-allowed; }
+
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2.5px solid rgba(255,255,255,0.4);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.7s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-submit.loading .spinner { display: block; }
+    .btn-submit.loading .btn-text { opacity: 0.8; }
+
+    .alert {
+      border-radius: var(--radius); padding: 16px 20px;
+      font-size: 14px; line-height: 1.6;
+      display: none; margin-top: 16px;
+      animation: slide-up 0.3s ease both;
+    }
+    .alert.visible { display: flex; gap: 12px; align-items: flex-start; }
+    .alert-success { background: rgba(39,174,96,0.1); border: 1.5px solid rgba(39,174,96,0.3); color: #1e8449; }
+    .alert-error   { background: rgba(231,76,60,0.08); border: 1.5px solid rgba(231,76,60,0.25); color: #c0392b; }
+    .alert-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+    .alert strong { display: block; font-weight: 600; margin-bottom: 3px; }
+
+    .progress-wrap { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 32px; display: none; }
+    .progress-wrap.visible { display: block; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, var(--sun), var(--leaf-glow)); width: 0%; transition: width 0.4s ease; border-radius: 2px; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 560px) {
+      .page-wrapper { padding: 28px 14px 80px; }
+      .card { padding: 24px 16px; border-radius: 18px; margin-bottom: 16px; }
+      .header { margin-bottom: 28px; }
+      .sun-icon { width: 60px; height: 60px; }
+      .sun-icon svg { width: 30px; height: 30px; }
+      h1 { font-size: 24px; }
+      .subtitle { font-size: 13px; }
+      .section-title { font-size: 15px; margin-bottom: 16px; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .field input, .field select { padding: 13px 14px; font-size: 16px; }
+      .file-drop { padding: 22px 14px; }
+      .btn-submit { font-size: 15px; padding: 14px 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <div class="header">
+    <div class="sun-icon">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="5" fill="white"/>
+        <line x1="12" y1="2"    x2="12" y2="4"    stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <line x1="12" y1="20"   x2="12" y2="22"   stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <line x1="2"  y1="12"   x2="4"  y2="12"   stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <line x1="20" y1="12"   x2="22" y2="12"   stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <line x1="4.93"  y1="4.93"  x2="6.34"  y2="6.34"  stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <line x1="17.66" y1="17.66" x2="19.07" y2="19.07" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <line x1="19.07" y1="4.93"  x2="17.66" y2="6.34"  stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <line x1="6.34"  y1="17.66" x2="4.93"  y2="19.07" stroke="white" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1>Solar Lead <em>Registration</em></h1>
+    <p class="subtitle">Submit customer details and KSEB bill for solar installation leads</p>
+  </div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <form id="leadForm" novalidate>
+
+    <!-- Section 1: Employee Info -->
+    <div class="card">
+      <div class="section-title">
+        <div class="section-icon">👤</div>
+        Employee Details
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Employee Name <span class="req">*</span></label>
+          <input type="text" name="employeeName" placeholder="Full name" required />
+          <span class="field-error">Required field</span>
+        </div>
+        <div class="field">
+          <label>Employee Code <span class="req">*</span></label>
+          <input type="text" name="employeeCode" placeholder="EMP-001" required />
+          <span class="field-error">Required field</span>
+        </div>
+        <div class="field">
+          <label>Designation <span class="req">*</span></label>
+          <input type="text" name="designation" placeholder="e.g. Sales Executive" required />
+          <span class="field-error">Required field</span>
+        </div>
+        <div class="field">
+          <label>Mobile Number <span class="req">*</span></label>
+          <input type="tel" name="employeeMobile" placeholder="10-digit mobile" required />
+          <span class="field-error">Enter valid mobile number</span>
+        </div>
+        <div class="field">
+          <label>Company Name <span class="req">*</span></label>
+          <select name="companyName" required>
+            <option value="">Select company…</option>
+            <option>SML Finance</option>
+            <option>Vanchinad Finance</option>
+            <option>Sangeeth Nidhi</option>
+            <option>BRD</option>
+            <option>SML Motors</option>
+            <option>SML Solar</option>
+            <option>Other</option>
+          </select>
+          <span class="field-error">Please select a company</span>
+        </div>
+        <div class="field">
+          <label>Branch Name <span class="req">*</span></label>
+          <input type="text" name="branchName" placeholder="Branch location" required />
+          <span class="field-error">Required field</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Customer Info -->
+    <div class="card">
+      <div class="section-title">
+        <div class="section-icon">🏡</div>
+        Customer Details
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Customer Name <span class="req">*</span></label>
+          <input type="text" name="customerName" placeholder="Full name" required />
+          <span class="field-error">Required field</span>
+        </div>
+        <div class="field">
+          <label>Customer Mobile <span class="req">*</span></label>
+          <input type="tel" name="customerMobile" placeholder="10-digit mobile" required />
+          <span class="field-error">Enter valid mobile number</span>
+        </div>
+        <div class="field grid-1" style="grid-column: 1 / -1;">
+          <label>Customer Address <span class="req">*</span></label>
+          <input type="text" name="customerAddress" placeholder="Full address" required />
+          <span class="field-error">Required field</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: KSEB Info -->
+    <div class="card">
+      <div class="section-title">
+        <div class="section-icon">⚡</div>
+        KSEB Details
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>KSEB Consumer No. <span class="req">*</span></label>
+          <input type="text" name="ksebConsumer" placeholder="Consumer number" required />
+          <span class="field-error">Required field</span>
+        </div>
+        <div class="field">
+          <label>Monthly KSEB Bill (₹) <span class="req">*</span></label>
+          <input type="number" id="monthlyBill" name="monthlyBill" placeholder="e.g. 3000" min="0" required />
+          <span class="field-error">Enter valid amount</span>
+          <!-- Warning shown inline immediately after leaving the field -->
+          <div class="incentive-warning" id="incentiveWarning">
+            <span class="incentive-warning-icon">⚠️</span>
+            <div class="incentive-warning-text">
+              <strong>Not eligible for lead incentive</strong>
+              Since the bill is below ₹3,000, you will not receive the ₹250 lead incentive. KSEB bill upload is optional.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <div class="field">
+          <label>Upload KSEB Bill <span class="req" id="uploadReq">*</span></label>
+          <div class="file-drop" id="fileDrop">
+            <input type="file" id="billFile" accept="image/*,.pdf" />
+            <span class="file-icon">📄</span>
+            <p class="file-drop-text">
+              <strong>Click to upload</strong> or drag &amp; drop<br>
+              PDF, JPG, PNG — max 10 MB
+            </p>
+          </div>
+          <div class="file-chosen" id="fileChosen">
+            <span class="file-chosen-icon">✅</span>
+            <span class="file-chosen-name" id="fileChosenName"></span>
+            <button type="button" class="file-remove" id="fileRemove" title="Remove">✕</button>
+          </div>
+          <span class="field-error" id="fileError">Please upload the KSEB bill</span>
+        </div>
+      </div>
+
+      <div class="submit-area">
+        <button type="submit" class="btn-submit" id="submitBtn">
+          <div class="spinner"></div>
+          <span class="btn-text">Submit Lead →</span>
+        </button>
+        <div class="alert alert-success" id="alertSuccess">
+          <span class="alert-icon">🎉</span>
+          <div>
+            <strong>Lead submitted successfully!</strong>
+            The data has been saved to the Google Sheet and the KSEB bill uploaded to Google Drive.
+          </div>
+        </div>
+        <div class="alert alert-error" id="alertError">
+          <span class="alert-icon">⚠️</span>
+          <div>
+            <strong>Submission failed.</strong>
+            <span id="alertErrorMsg">Please try again or contact support.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  // ============================================================
+  // ⚙️  CONFIGURATION — paste your Apps Script Web App URL here
+  // ============================================================
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyc5KrmYBlD3JJDoR2aw2ZpoRJmr3XKP69_0thlCeRfyMek7KdUADNydcMoBVnmc1NN/exec";
+  // ============================================================
+
+  const form             = document.getElementById("leadForm");
+  const submitBtn        = document.getElementById("submitBtn");
+  const fileDrop         = document.getElementById("fileDrop");
+  const billFileInput    = document.getElementById("billFile");
+  const fileChosen       = document.getElementById("fileChosen");
+  const fileChosenName   = document.getElementById("fileChosenName");
+  const fileRemove       = document.getElementById("fileRemove");
+  const fileError        = document.getElementById("fileError");
+  const alertSuccess     = document.getElementById("alertSuccess");
+  const alertError       = document.getElementById("alertError");
+  const progressWrap     = document.getElementById("progressWrap");
+  const progressBar      = document.getElementById("progressBar");
+  const monthlyBillInput = document.getElementById("monthlyBill");
+  const incentiveWarning = document.getElementById("incentiveWarning");
+  const uploadReq        = document.getElementById("uploadReq");
+
+  let chosenFile = null;
+
+  // ── BILL AMOUNT: show/hide warning and toggle upload requirement ──
+  function updateBillLogic() {
+    var val = monthlyBillInput.value.trim();
+    var amt = parseFloat(val);
+    if (val !== "" && !isNaN(amt) && amt > 0 && amt < 3000) {
+      incentiveWarning.classList.add("visible");   // show warning
+      uploadReq.style.display = "none";            // mark upload as optional
+    } else {
+      incentiveWarning.classList.remove("visible"); // hide warning
+      uploadReq.style.display = "inline";           // mark upload as required
+    }
+  }
+
+  // Fire on blur (immediately after leaving the field) AND on input
+  monthlyBillInput.addEventListener("blur", updateBillLogic);
+  monthlyBillInput.addEventListener("input", updateBillLogic);
+
+  // ── FILE UPLOAD ──
+  fileDrop.addEventListener("dragover", function(e) { e.preventDefault(); fileDrop.classList.add("dragover"); });
+  fileDrop.addEventListener("dragleave", function() { fileDrop.classList.remove("dragover"); });
+  fileDrop.addEventListener("drop", function(e) {
+    e.preventDefault(); fileDrop.classList.remove("dragover");
+    var file = e.dataTransfer.files[0];
+    if (file) setFile(file);
+  });
+
+  billFileInput.addEventListener("change", function() {
+    if (billFileInput.files[0]) setFile(billFileInput.files[0]);
+  });
+
+  function setFile(file) {
+    chosenFile = file;
+    fileChosenName.textContent = file.name;
+    fileChosen.classList.add("visible");
+    fileError.classList.remove("visible");
+  }
+
+  fileRemove.addEventListener("click", function() {
+    chosenFile = null;
+    billFileInput.value = "";
+    fileChosen.classList.remove("visible");
+  });
+
+  // ── FIELD VALIDATION ──
+  function validateField(input) {
+    var err = input.parentElement.querySelector(".field-error");
+    var ok = input.checkValidity() && input.value.trim() !== "";
+    input.classList.toggle("error", !ok);
+    if (err) err.classList.toggle("visible", !ok);
+    return ok;
+  }
+
+  function setProgress(pct) {
+    progressWrap.classList.add("visible");
+    progressBar.style.width = pct + "%";
+  }
+
+  // ── FILE TO BASE64 ──
+  function toBase64(file) {
+    return new Promise(function(res, rej) {
+      var reader = new FileReader();
+      reader.onload = function() { res(reader.result.split(",")[1]); };
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ── FORM SUBMIT ──
+  form.addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    // Validate all required fields
+    var fields = form.querySelectorAll("input[required], select[required]");
+    var valid = true;
+    fields.forEach(function(f) { if (!validateField(f)) valid = false; });
+
+    // File required only when bill >= 3000 (or field empty)
+    var val = monthlyBillInput.value.trim();
+    var amt = parseFloat(val);
+    var billBelow3000 = (val !== "" && !isNaN(amt) && amt > 0 && amt < 3000);
+    var fileRequired = !billBelow3000;
+
+    if (fileRequired && !chosenFile) {
+      fileError.classList.add("visible");
+      valid = false;
+    }
+
+    if (!valid) return;
+
+    alertSuccess.classList.remove("visible");
+    alertError.classList.remove("visible");
+
+    submitBtn.classList.add("loading");
+    submitBtn.disabled = true;
+    setProgress(15);
+
+    try {
+      setProgress(35);
+      var fileBase64 = chosenFile ? await toBase64(chosenFile) : "";
+      setProgress(55);
+
+      // Build payload — EXACTLY the same structure as the original working version
+      var payload = {
+        employeeName:    form.employeeName.value.trim(),
+        employeeCode:    form.employeeCode.value.trim(),
+        designation:     form.designation.value.trim(),
+        employeeMobile:  form.employeeMobile.value.trim(),
+        companyName:     form.companyName.value.trim(),
+        branchName:      form.branchName.value.trim(),
+        customerName:    form.customerName.value.trim(),
+        customerMobile:  form.customerMobile.value.trim(),
+        customerAddress: form.customerAddress.value.trim(),
+        ksebConsumer:    form.ksebConsumer.value.trim(),
+        monthlyBill:     form.monthlyBill.value.trim(),
+        fileName:        chosenFile ? chosenFile.name : "",
+        fileType:        chosenFile ? chosenFile.type : "",
+        fileBase64:      fileBase64
+      };
+
+      setProgress(70);
+
+      // POST — same as original working fetch (no Content-Type header, JSON body)
+      var response = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+
+      var result = await response.json();
+      setProgress(100);
+
+      if (result.status === "success") {
+        alertSuccess.classList.add("visible");
+        form.reset();
+        chosenFile = null;
+        fileChosen.classList.remove("visible");
+        incentiveWarning.classList.remove("visible");
+        uploadReq.style.display = "inline";
+        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      } else {
+        throw new Error(result.message || "Unknown error");
+      }
+    } catch (err) {
+      document.getElementById("alertErrorMsg").textContent = err.message || "Please try again.";
+      alertError.classList.add("visible");
+    } finally {
+      submitBtn.classList.remove("loading");
+      submitBtn.disabled = false;
+      setTimeout(function() {
+        progressWrap.classList.remove("visible");
+        progressBar.style.width = "0%";
+      }, 1000);
+    }
+  });
+</script>
+</body>
+</html>
