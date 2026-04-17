@@ -36,47 +36,38 @@
 
     body::before {
       content: '';
-      position: fixed;
-      top: -120px; right: -120px;
+      position: fixed; top: -120px; right: -120px;
       width: 480px; height: 480px;
       background: radial-gradient(circle, rgba(245,166,35,0.18) 0%, transparent 70%);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 0;
+      border-radius: 50%; pointer-events: none; z-index: 0;
     }
     body::after {
       content: '';
-      position: fixed;
-      bottom: -80px; left: -80px;
+      position: fixed; bottom: -80px; left: -80px;
       width: 340px; height: 340px;
       background: radial-gradient(circle, rgba(11,57,84,0.12) 0%, transparent 70%);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 0;
+      border-radius: 50%; pointer-events: none; z-index: 0;
     }
 
     .page-wrapper {
       position: relative; z-index: 1;
-      max-width: 720px;
-      margin: 0 auto;
+      max-width: 720px; margin: 0 auto;
       padding: 48px 24px 80px;
     }
 
-    /* ── HEADER ── */
+    /* HEADER */
     .header { text-align: center; margin-bottom: 48px; }
     .sun-icon {
-      display: inline-flex;
-      align-items: center; justify-content: center;
+      display: inline-flex; align-items: center; justify-content: center;
       width: 72px; height: 72px;
       background: linear-gradient(135deg, var(--sun), var(--sun-deep));
-      border-radius: 50%;
-      margin-bottom: 20px;
+      border-radius: 50%; margin-bottom: 20px;
       box-shadow: 0 8px 32px rgba(245,166,35,0.35);
       animation: pulse-sun 3s ease-in-out infinite;
     }
     @keyframes pulse-sun {
-      0%, 100% { box-shadow: 0 8px 32px rgba(245,166,35,0.35); }
-      50%       { box-shadow: 0 8px 48px rgba(245,166,35,0.55); }
+      0%,100% { box-shadow: 0 8px 32px rgba(245,166,35,0.35); }
+      50%      { box-shadow: 0 8px 48px rgba(245,166,35,0.55); }
     }
     .sun-icon svg { width: 38px; height: 38px; }
     h1 {
@@ -87,11 +78,9 @@
     h1 em { color: var(--sun-deep); font-style: normal; }
     .subtitle { color: var(--muted); font-size: 15px; font-weight: 300; }
 
-    /* ── CARD ── */
+    /* CARD */
     .card {
-      background: var(--surface);
-      border-radius: 24px;
-      padding: 40px;
+      background: var(--surface); border-radius: 24px; padding: 40px;
       box-shadow: 0 4px 40px rgba(11,57,84,0.08), 0 1px 4px rgba(0,0,0,0.04);
       border: 1px solid rgba(221,228,228,0.6);
       margin-bottom: 24px;
@@ -118,32 +107,26 @@
       font-size: 16px;
     }
 
-    /* ── GRID ── */
+    /* GRID */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .grid-1 { display: grid; grid-template-columns: 1fr; gap: 20px; }
 
-    /* ── FIELDS ── */
+    /* FIELDS */
     .field { display: flex; flex-direction: column; gap: 6px; }
     .field label {
       font-size: 13px; font-weight: 600;
       color: var(--sky); letter-spacing: 0.03em; text-transform: uppercase;
     }
     .field label .req { color: var(--sun-deep); margin-left: 3px; }
-
-    .field input,
-    .field select,
-    .field textarea {
+    .field input, .field select, .field textarea {
       padding: 12px 16px;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 16px; color: var(--text); background: var(--bg);
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif; font-size: 16px;
+      color: var(--text); background: var(--bg);
       transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
       outline: none; appearance: none; -webkit-appearance: none;
     }
-    .field input:focus,
-    .field select:focus,
-    .field textarea:focus {
+    .field input:focus, .field select:focus, .field textarea:focus {
       border-color: var(--sun); background: #fff;
       box-shadow: 0 0 0 4px rgba(245,166,35,0.12);
     }
@@ -156,7 +139,7 @@
       background-repeat: no-repeat; background-position: right 14px center; padding-right: 40px;
     }
 
-    /* ── INCENTIVE WARNING ── */
+    /* INCENTIVE WARNING */
     .incentive-warning {
       display: none; margin-top: 8px;
       background: #FFF8EC; border: 1.5px solid #F5A623;
@@ -168,7 +151,7 @@
     .incentive-warning-text { font-size: 13px; line-height: 1.5; color: #7a4800; }
     .incentive-warning-text strong { display: block; font-weight: 600; margin-bottom: 2px; }
 
-    /* ── FILE UPLOAD ── */
+    /* FILE UPLOAD */
     .file-drop {
       border: 2px dashed var(--border); border-radius: var(--radius);
       padding: 32px 20px; text-align: center; cursor: pointer;
@@ -200,7 +183,7 @@
     }
     .file-remove:hover { color: var(--error); background: rgba(231,76,60,0.08); }
 
-    /* ── SUBMIT BUTTON ── */
+    /* SUBMIT BUTTON */
     .submit-area { margin-top: 8px; }
     .btn-submit {
       width: 100%; padding: 16px 32px;
@@ -215,7 +198,6 @@
     .btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(11,57,84,0.4); }
     .btn-submit:active:not(:disabled) { transform: translateY(0); }
     .btn-submit:disabled { opacity: 0.65; cursor: not-allowed; }
-
     .spinner {
       width: 20px; height: 20px;
       border: 2.5px solid rgba(255,255,255,0.4);
@@ -226,7 +208,7 @@
     .btn-submit.loading .spinner { display: block; }
     .btn-submit.loading .btn-text { opacity: 0.8; }
 
-    /* ── ALERTS ── */
+    /* ALERTS */
     .alert {
       border-radius: var(--radius); padding: 16px 20px;
       font-size: 14px; line-height: 1.6;
@@ -239,15 +221,31 @@
     .alert-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
     .alert strong { display: block; font-weight: 600; margin-bottom: 3px; }
 
-    /* ── REFERENCE NUMBER BOX ── */
+    /* UPLOADING NOTICE (shown while single call is in flight) */
+    .uploading-notice {
+      display: none; margin-top: 14px;
+      background: #EAF4FB; border: 1.5px solid #A8D8EA;
+      border-radius: var(--radius); padding: 14px 18px;
+      align-items: center; gap: 12px;
+      font-size: 14px; color: var(--sky); font-weight: 500;
+      animation: slide-up 0.3s ease both;
+    }
+    .uploading-notice.visible { display: flex; }
+    .uploading-notice .spinner-xs {
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(11,57,84,0.2);
+      border-top-color: var(--sky); border-radius: 50%;
+      animation: spin 0.7s linear infinite; flex-shrink: 0;
+    }
+    /* keep old class name for compat but hidden now */
+    .file-upload-status { display: none !important; }
+
+    /* REFERENCE NUMBER BOX */
     .ref-box {
-      display: none;
-      margin-top: 16px;
+      display: none; margin-top: 16px;
       background: linear-gradient(135deg, #EAF6FF, #F0FFF4);
-      border: 1.5px solid #A8D8EA;
-      border-radius: var(--radius);
-      padding: 20px 24px;
-      text-align: center;
+      border: 1.5px solid #A8D8EA; border-radius: var(--radius);
+      padding: 20px 24px; text-align: center;
       animation: slide-up 0.4s ease both;
     }
     .ref-box.visible { display: block; }
@@ -260,9 +258,7 @@
       font-size: 28px; color: var(--sky);
       letter-spacing: 0.05em; margin-bottom: 8px;
     }
-    .ref-box-note {
-      font-size: 12.5px; color: var(--muted); line-height: 1.5;
-    }
+    .ref-box-note { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
     .btn-copy {
       margin-top: 12px;
       display: inline-flex; align-items: center; gap: 6px;
@@ -275,30 +271,24 @@
     .btn-copy:hover { background: var(--sky-light); }
     .btn-copy.copied { background: var(--leaf); }
 
-    /* ── PROGRESS BAR ── */
+    /* PROGRESS BAR */
     .progress-wrap { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 32px; display: none; }
     .progress-wrap.visible { display: block; }
     .progress-bar { height: 100%; background: linear-gradient(90deg, var(--sun), var(--leaf-glow)); width: 0%; transition: width 0.4s ease; border-radius: 2px; }
 
-    /* ── STATUS CHECKER SECTION ── */
+    /* STATUS CHECKER */
     .status-divider {
-      text-align: center; margin: 40px 0 28px;
-      position: relative;
+      text-align: center; margin: 40px 0 28px; position: relative;
     }
     .status-divider::before {
       content: ''; position: absolute;
-      top: 50%; left: 0; right: 0; height: 1px;
-      background: var(--border);
+      top: 50%; left: 0; right: 0; height: 1px; background: var(--border);
     }
     .status-divider span {
       position: relative; background: var(--bg);
-      padding: 0 16px; font-size: 13px;
-      color: var(--muted); font-weight: 500;
+      padding: 0 16px; font-size: 13px; color: var(--muted); font-weight: 500;
     }
-
-    .status-search {
-      display: flex; gap: 10px; align-items: stretch;
-    }
+    .status-search { display: flex; gap: 10px; align-items: stretch; }
     .status-search input {
       flex: 1; padding: 13px 16px;
       border: 1.5px solid var(--border); border-radius: var(--radius);
@@ -333,7 +323,6 @@
     .btn-check.loading .spinner-sm { display: block; }
     .btn-check.loading .check-text { opacity: 0.8; }
 
-    /* Status result card */
     .status-result {
       display: none; margin-top: 16px;
       border-radius: var(--radius); overflow: hidden;
@@ -341,44 +330,36 @@
     }
     .status-result.visible { display: block; }
     .status-result-header {
-      padding: 14px 20px;
-      background: var(--sky);
-      color: white;
+      padding: 14px 20px; background: var(--sky); color: white;
       display: flex; align-items: center; justify-content: space-between;
     }
     .status-result-ref { font-size: 13px; opacity: 0.8; }
     .status-result-body {
       background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-top: none;
-      padding: 20px;
+      border: 1.5px solid var(--border); border-top: none; padding: 20px;
     }
     .status-badge {
-      display: inline-block;
-      padding: 5px 14px; border-radius: 20px;
-      font-size: 13px; font-weight: 600;
-      margin-bottom: 14px;
+      display: inline-block; padding: 5px 14px; border-radius: 20px;
+      font-size: 13px; font-weight: 600; margin-bottom: 14px;
     }
-    .status-badge.submitted         { background: #EBF5FB; color: #1A5276; }
-    .status-badge.contacting        { background: #FEF9E7; color: #7D6608; }
-    .status-badge.field-visit       { background: #FDF2F8; color: #76448A; }
-    .status-badge.work-order        { background: #EAF4FB; color: #1F618D; }
-    .status-badge.installed         { background: #EAFAF1; color: #1E8449; }
-    .status-badge.rejected          { background: #FDEDEC; color: #922B21; }
+    .status-badge.submitted   { background: #EBF5FB; color: #1A5276; }
+    .status-badge.contacting  { background: #FEF9E7; color: #7D6608; }
+    .status-badge.field-visit { background: #FDF2F8; color: #76448A; }
+    .status-badge.work-order  { background: #EAF4FB; color: #1F618D; }
+    .status-badge.installed   { background: #EAFAF1; color: #1E8449; }
+    .status-badge.rejected    { background: #FDEDEC; color: #922B21; }
     .status-meta { font-size: 13px; color: var(--muted); line-height: 1.9; }
     .status-meta span { color: var(--text); font-weight: 500; }
     .status-not-found {
       display: none; margin-top: 16px;
-      background: rgba(231,76,60,0.07);
-      border: 1.5px solid rgba(231,76,60,0.2);
-      border-radius: var(--radius);
-      padding: 14px 18px;
+      background: rgba(231,76,60,0.07); border: 1.5px solid rgba(231,76,60,0.2);
+      border-radius: var(--radius); padding: 14px 18px;
       font-size: 14px; color: #922B21;
       animation: slide-up 0.3s ease both;
     }
     .status-not-found.visible { display: flex; gap: 10px; align-items: center; }
 
-    /* ── MOBILE ── */
+    /* MOBILE */
     @media (max-width: 560px) {
       .page-wrapper { padding: 28px 14px 80px; }
       .card { padding: 24px 16px; border-radius: 18px; margin-bottom: 16px; }
@@ -551,26 +532,36 @@
           <span class="btn-text">Submit Lead →</span>
         </button>
 
-        <!-- Success alert -->
+        <!-- Uploading notice (shown while file + data upload in single call) -->
+        <div class="uploading-notice" id="uploadingNotice">
+          <div class="spinner-xs"></div>
+          <span>Uploading bill &amp; saving lead — please wait, do not close this page…</span>
+        </div>
+
+        <!-- Success -->
         <div class="alert alert-success" id="alertSuccess">
           <span class="alert-icon">🎉</span>
           <div>
             <strong>Lead submitted successfully!</strong>
-            Save your reference number below — you'll need it to track your lead status.
+            Save your reference number below — use it to track your lead status.
           </div>
         </div>
 
-        <!-- Reference number box — shown after success -->
+        <!-- Reference number box -->
         <div class="ref-box" id="refBox">
           <div class="ref-box-label">Your Reference Number</div>
           <div class="ref-box-number" id="refNumber">—</div>
           <div class="ref-box-note">Please save this number. Use it to check your lead status anytime.</div>
-          <button type="button" class="btn-copy" id="btnCopy" onclick="copyRef()">
-            📋 Copy
-          </button>
+          <button type="button" class="btn-copy" id="btnCopy" onclick="copyRef()">📋 Copy</button>
         </div>
 
-        <!-- Error alert -->
+        <!-- File uploading indicator (shown after form success, while file uploads in background) -->
+        <div class="file-upload-status" id="fileUploadStatus">
+          <div class="spinner-xs"></div>
+          <span>Uploading KSEB bill in background…</span>
+        </div>
+
+        <!-- Error -->
         <div class="alert alert-error" id="alertError">
           <span class="alert-icon">⚠️</span>
           <div>
@@ -583,7 +574,7 @@
 
   </form>
 
-  <!-- ── LEAD STATUS CHECKER ── -->
+  <!-- LEAD STATUS CHECKER -->
   <div class="status-divider"><span>OR CHECK YOUR LEAD STATUS</span></div>
 
   <div class="card" style="animation-delay: 0.18s;">
@@ -592,14 +583,12 @@
       Track Your Lead
     </div>
     <div class="status-search">
-      <input type="text" id="statusRefInput" placeholder="Enter reference number e.g. SML-20250416-1234" />
+      <input type="text" id="statusRefInput" placeholder="Enter reference no. e.g. SML-20250416-1234" />
       <button type="button" class="btn-check" id="btnCheck" onclick="checkStatus()">
         <span class="spinner-sm"></span>
         <span class="check-text">Check Status</span>
       </button>
     </div>
-
-    <!-- Result -->
     <div class="status-result" id="statusResult">
       <div class="status-result-header">
         <div style="font-weight:600; font-size:15px;">Lead Details</div>
@@ -610,19 +599,17 @@
         <div class="status-meta" id="statusMeta"></div>
       </div>
     </div>
-
-    <!-- Not found -->
     <div class="status-not-found" id="statusNotFound">
       <span style="font-size:20px;">🔎</span>
       <div>No lead found with this reference number. Please check and try again.</div>
     </div>
   </div>
 
-</div><!-- end page-wrapper -->
+</div>
 
 <script>
   // ============================================================
-  // ⚙️  CONFIGURATION — paste your Apps Script Web App URL here
+  // ⚙️  CONFIGURATION
   // ============================================================
   const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyc5KrmYBlD3JJDoR2aw2ZpoRJmr3XKP69_0thlCeRfyMek7KdUADNydcMoBVnmc1NN/exec";
   // ============================================================
@@ -644,6 +631,7 @@
   const uploadReq        = document.getElementById("uploadReq");
   const refBox           = document.getElementById("refBox");
   const refNumberEl      = document.getElementById("refNumber");
+  const fileUploadStatus = document.getElementById("fileUploadStatus");
 
   let chosenFile = null;
 
@@ -662,13 +650,12 @@
   monthlyBillInput.addEventListener("blur", updateBillLogic);
   monthlyBillInput.addEventListener("input", updateBillLogic);
 
-  // ── FILE UPLOAD ──
+  // ── FILE HANDLING ──
   fileDrop.addEventListener("dragover", function(e) { e.preventDefault(); fileDrop.classList.add("dragover"); });
   fileDrop.addEventListener("dragleave", function() { fileDrop.classList.remove("dragover"); });
   fileDrop.addEventListener("drop", function(e) {
     e.preventDefault(); fileDrop.classList.remove("dragover");
-    var file = e.dataTransfer.files[0];
-    if (file) setFile(file);
+    if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
   });
   billFileInput.addEventListener("change", function() {
     if (billFileInput.files[0]) setFile(billFileInput.files[0]);
@@ -708,7 +695,7 @@
     });
   }
 
-  // ── COPY REFERENCE NUMBER ──
+  // ── COPY REF NUMBER ──
   function copyRef() {
     var ref = refNumberEl.textContent;
     if (!ref || ref === "—") return;
@@ -724,9 +711,16 @@
   }
 
   // ── FORM SUBMIT ──
+  // SINGLE-CALL ARCHITECTURE:
+  // File is base64-encoded client-side, then sent together with form data in ONE request.
+  // Server uploads file to Drive, writes one complete row, returns ref number.
+  // This prevents duplicate rows caused by retries of the old two-call flow.
+  const uploadingNotice = document.getElementById("uploadingNotice");
+
   form.addEventListener("submit", async function(e) {
     e.preventDefault();
 
+    // Validate fields
     var fields = form.querySelectorAll("input[required], select[required]");
     var valid = true;
     fields.forEach(function(f) { if (!validateField(f)) valid = false; });
@@ -738,22 +732,19 @@
       fileError.classList.add("visible");
       valid = false;
     }
-
     if (!valid) return;
 
     alertSuccess.classList.remove("visible");
     alertError.classList.remove("visible");
     refBox.classList.remove("visible");
+    uploadingNotice.classList.remove("visible");
 
     submitBtn.classList.add("loading");
     submitBtn.disabled = true;
-    setProgress(15);
+    setProgress(10);
 
     try {
-      setProgress(35);
-      var fileBase64 = chosenFile ? await toBase64(chosenFile) : "";
-      setProgress(55);
-
+      // ── Build payload: form fields + file (base64) all in ONE object ──
       var payload = {
         employeeName:    form.employeeName.value.trim(),
         employeeCode:    form.employeeCode.value.trim(),
@@ -765,14 +756,21 @@
         customerMobile:  form.customerMobile.value.trim(),
         customerAddress: form.customerAddress.value.trim(),
         ksebConsumer:    form.ksebConsumer.value.trim(),
-        monthlyBill:     form.monthlyBill.value.trim(),
-        fileName:        chosenFile ? chosenFile.name : "",
-        fileType:        chosenFile ? chosenFile.type : "",
-        fileBase64:      fileBase64
+        monthlyBill:     form.monthlyBill.value.trim()
       };
 
-      setProgress(70);
+      // Encode file if present (may take a moment for large files)
+      if (chosenFile) {
+        setProgress(30);
+        uploadingNotice.classList.add("visible");
+        payload.fileBase64 = await toBase64(chosenFile);
+        payload.fileName   = chosenFile.name;
+        payload.fileType   = chosenFile.type;
+      }
 
+      setProgress(60);
+
+      // ── SINGLE CALL: everything sent together ──
       var response = await fetch(APPS_SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify(payload)
@@ -780,24 +778,26 @@
 
       var result = await response.json();
       setProgress(100);
+      uploadingNotice.classList.remove("visible");
 
-      if (result.status === "success") {
-        alertSuccess.classList.add("visible");
-
-        // Show reference number
-        refNumberEl.textContent = result.refNumber || "—";
-        refBox.classList.add("visible");
-
-        form.reset();
-        chosenFile = null;
-        fileChosen.classList.remove("visible");
-        incentiveWarning.classList.remove("visible");
-        uploadReq.style.display = "inline";
-        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-      } else {
+      if (result.status !== "success") {
         throw new Error(result.message || "Unknown error");
       }
+
+      // ── SUCCESS ──
+      alertSuccess.classList.add("visible");
+      refNumberEl.textContent = result.refNumber;
+      refBox.classList.add("visible");
+
+      form.reset();
+      chosenFile = null;
+      fileChosen.classList.remove("visible");
+      incentiveWarning.classList.remove("visible");
+      uploadReq.style.display = "inline";
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+
     } catch (err) {
+      uploadingNotice.classList.remove("visible");
       document.getElementById("alertErrorMsg").textContent = err.message || "Please try again.";
       alertError.classList.add("visible");
     } finally {
@@ -812,19 +812,16 @@
 
   // ── STATUS CHECKER ──
   async function checkStatus() {
-    var input  = document.getElementById("statusRefInput");
-    var ref    = input.value.trim().toUpperCase();
-    var btn    = document.getElementById("btnCheck");
-    var result = document.getElementById("statusResult");
+    var input    = document.getElementById("statusRefInput");
+    var ref      = input.value.trim().toUpperCase();
+    var btn      = document.getElementById("btnCheck");
+    var result   = document.getElementById("statusResult");
     var notFound = document.getElementById("statusNotFound");
 
     result.classList.remove("visible");
     notFound.classList.remove("visible");
 
-    if (!ref) {
-      input.focus();
-      return;
-    }
+    if (!ref) { input.focus(); return; }
 
     btn.classList.add("loading");
     btn.disabled = true;
@@ -837,18 +834,14 @@
       var data = await response.json();
 
       if (data.status === "found") {
-        // Populate result
         document.getElementById("statusResultRef").textContent = data.refNumber;
-
         var badge = document.getElementById("statusBadge");
         badge.textContent = data.leadStatus;
         badge.className = "status-badge " + statusClass(data.leadStatus);
-
         document.getElementById("statusMeta").innerHTML =
           "Customer: <span>" + data.customerName + "</span><br>" +
           "Submitted by: <span>" + data.employeeName + "</span><br>" +
           "Submitted on: <span>" + data.submittedOn + "</span>";
-
         result.classList.add("visible");
       } else {
         notFound.classList.add("visible");
@@ -861,20 +854,17 @@
     }
   }
 
-  // Map status text to CSS class
   function statusClass(s) {
-    var map = {
+    return {
       "Submitted":           "submitted",
       "Contacting Customer": "contacting",
       "Field Visit":         "field-visit",
       "Work Order Received": "work-order",
       "Installed":           "installed",
       "Rejected":            "rejected"
-    };
-    return map[s] || "submitted";
+    }[s] || "submitted";
   }
 
-  // Allow pressing Enter in the status input
   document.getElementById("statusRefInput").addEventListener("keydown", function(e) {
     if (e.key === "Enter") checkStatus();
   });
