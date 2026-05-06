@@ -359,6 +359,37 @@
     }
     .status-not-found.visible { display: flex; gap: 10px; align-items: center; }
 
+
+
+    /* INCENTIVE WARNING */
+    .incentive-warning {
+      display: none; margin-top: 8px;
+      background: #FFF8EC; border: 1.5px solid #F5A623;
+      border-radius: 10px; padding: 12px 14px;
+      gap: 10px; align-items: flex-start;
+    }
+    .incentive-warning.visible { display: flex; }
+    .incentive-warning-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+    .incentive-warning-text { font-size: 13px; line-height: 1.5; color: #7a4800; }
+    .incentive-warning-text strong { display: block; font-weight: 600; margin-bottom: 2px; }
+
+    /* BANK DETAILS */
+    .bank-fields {
+      display: none;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid var(--bg);
+      animation: slide-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .bank-fields.visible { display: block; }
+    .bank-fields-title {
+      font-size: 13px; font-weight: 600; color: var(--sky);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .bank-fields-title::before { content: '🏦'; font-size: 16px; }
+
     /* MOBILE */
     @media (max-width: 560px) {
       .page-wrapper { padding: 28px 14px 80px; }
@@ -523,6 +554,33 @@
             <button type="button" class="file-remove" id="fileRemove" title="Remove">✕</button>
           </div>
           <span class="field-error" id="fileError">Please upload the KSEB bill</span>
+        </div>
+      </div>
+
+      <!-- Bank Details (shown when bill >= 3000) -->
+      <div class="bank-fields" id="bankFields">
+        <div class="bank-fields-title">Bank Account Details</div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Bank Name <span class="req">*</span></label>
+            <input type="text" id="bankName" name="bankName" placeholder="e.g. State Bank of India" />
+            <span class="field-error">Required field</span>
+          </div>
+          <div class="field">
+            <label>Bank Branch <span class="req">*</span></label>
+            <input type="text" id="bankBranch" name="bankBranch" placeholder="Branch name" />
+            <span class="field-error">Required field</span>
+          </div>
+          <div class="field">
+            <label>Account Number <span class="req">*</span></label>
+            <input type="text" id="bankAccount" name="bankAccount" placeholder="Account number" />
+            <span class="field-error">Required field</span>
+          </div>
+          <div class="field">
+            <label>IFSC Code <span class="req">*</span></label>
+            <input type="text" id="ifscCode" name="ifscCode" placeholder="e.g. SBIN0001234" style="text-transform:uppercase" />
+            <span class="field-error">Required field</span>
+          </div>
         </div>
       </div>
 
@@ -716,6 +774,29 @@
   // Server uploads file to Drive, writes one complete row, returns ref number.
   // This prevents duplicate rows caused by retries of the old two-call flow.
   const uploadingNotice = document.getElementById("uploadingNotice");
+  const bankFields      = document.getElementById("bankFields");
+
+  // Show/hide bank fields and bill warning based on monthly bill amount
+  function updateBillLogic() {
+    var val = monthlyBillInput.value.trim();
+    var amt = parseFloat(val);
+    var below3000 = (val !== "" && !isNaN(amt) && amt > 0 && amt < 3000);
+    var above3000 = (val !== "" && !isNaN(amt) && amt >= 3000);
+
+    incentiveWarning.classList.toggle("visible", below3000);
+    uploadReq.style.display = below3000 ? "none" : "inline";
+    bankFields.classList.toggle("visible", above3000);
+
+    ["bankName","bankBranch","bankAccount","ifscCode"].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) {
+        if (above3000) el.setAttribute("required","required");
+        else el.removeAttribute("required");
+      }
+    });
+  }
+  monthlyBillInput.addEventListener("input", updateBillLogic);
+  monthlyBillInput.addEventListener("blur",  updateBillLogic);
 
   form.addEventListener("submit", async function(e) {
     e.preventDefault();
@@ -756,7 +837,11 @@
         customerMobile:  form.customerMobile.value.trim(),
         customerAddress: form.customerAddress.value.trim(),
         ksebConsumer:    form.ksebConsumer.value.trim(),
-        monthlyBill:     form.monthlyBill.value.trim()
+        monthlyBill:     form.monthlyBill.value.trim(),
+        bankName:        form.bankName    ? form.bankName.value.trim()    : "",
+        bankBranch:      form.bankBranch  ? form.bankBranch.value.trim()  : "",
+        bankAccount:     form.bankAccount ? form.bankAccount.value.trim() : "",
+        ifscCode:        form.ifscCode    ? form.ifscCode.value.trim().toUpperCase() : ""
       };
 
       // Encode file if present (may take a moment for large files)
@@ -793,7 +878,12 @@
       chosenFile = null;
       fileChosen.classList.remove("visible");
       incentiveWarning.classList.remove("visible");
+      bankFields.classList.remove("visible");
       uploadReq.style.display = "inline";
+      ["bankName","bankBranch","bankAccount","ifscCode"].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.removeAttribute("required");
+      });
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
 
     } catch (err) {
