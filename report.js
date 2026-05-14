@@ -1,40 +1,29 @@
+
 // ============================================================
-// SOLAR LEAD REPORTS — report.js (v3 — CSV fetch)
+// SOLAR LEAD REPORTS — report.js (v4)
 // ============================================================
 
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTY-Kkkau9RrlH2yOF19QavsdqMhxRm7Fso8dkLHrDPg8rOBIPZx18WpqIRRE7asgC7ssx3P3SxUV2E/pub?gid=0&single=true&output=csv";
+const CSV_URL         = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTY-Kkkau9RrlH2yOF19QavsdqMhxRm7Fso8dkLHrDPg8rOBIPZx18WpqIRRE7asgC7ssx3P3SxUV2E/pub?gid=0&single=true&output=csv";
 const REPORT_PASSWORD = "solar";
 
-// ── EXACT COLUMN HEADERS FROM SHEET ──────────────────────────
 const COL = {
-  ref:        "Ref Number",
-  timestamp:  "Timestamp",
-  empName:    "Employee Name",
-  empCode:    "Employee Code",
-  desig:      "Designation",
-  empMobile:  "Employee Mobile Number",
-  company:    "Company Name",
-  branch:     "Branch Name",
-  custName:   "Customer Name",
-  custMobile: "Customer Mobile Number",
-  custAddr:   "Customer Address",
-  ksebCons:   "KSEB Consumer Number",
-  bill:       "Monthly KSEB Bill",
-  billFile:   "Upload KSEB BILL",
-  status:     "Lead Status",
-  bankName:   "Bank Name",
-  bankBranch: "Bank Branch",
-  account:    "Account Number",
-  ifsc:       "IFSC Code"
+  ref:"Ref Number", timestamp:"Timestamp", empName:"Employee Name",
+  empCode:"Employee Code", desig:"Designation", empMobile:"Employee Mobile Number",
+  company:"Company Name", branch:"Branch Name", custName:"Customer Name",
+  custMobile:"Customer Mobile Number", custAddr:"Customer Address",
+  ksebCons:"KSEB Consumer Number", bill:"Monthly KSEB Bill",
+  billFile:"Upload KSEB BILL", status:"Lead Status",
+  bankName:"Bank Name", bankBranch:"Bank Branch", account:"Account Number", ifsc:"IFSC Code"
 };
 
 // ── STATE ─────────────────────────────────────────────────────
 let allLeads      = [];
-let filteredLeads = [];
+let filteredLeads = [];   // driven by global month filter
 let selectedMonth = "all";
 let companyMonth  = "all";
 let branchMonth   = "all";
 let perfMonth     = "all";
+let selectedCompanyForBranch = "all";  // company selector for branch panel
 
 // ── BOOT ─────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", function () {
@@ -45,9 +34,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   document.getElementById("passwordInput").addEventListener("keydown", function (e) {
     if (e.key === "Enter") attemptLogin();
-  });
-  document.getElementById("drillModal").addEventListener("click", function (e) {
-    if (e.target === this) closeDrill();
   });
 });
 
@@ -65,13 +51,14 @@ function attemptLogin() {
   }
 }
 function logout() { sessionStorage.removeItem("rpt_auth"); location.reload(); }
+
 function showDashboard() {
   document.getElementById("loginScreen").classList.add("hidden");
   document.getElementById("dashboard").classList.remove("hidden");
   fetchData();
 }
 
-// ── FETCH & PARSE CSV ─────────────────────────────────────────
+// ── FETCH & PARSE ─────────────────────────────────────────────
 async function fetchData() {
   setLoading(true);
   document.getElementById("fetchError").classList.add("hidden");
@@ -79,15 +66,12 @@ async function fetchData() {
     var res  = await fetch(CSV_URL);
     var text = await res.text();
     allLeads = parseCSV(text);
-    if (allLeads.length === 0) {
-      showFetchError("No data found in sheet. Make sure the sheet has rows below the header.");
-      return;
-    }
-    buildMonthFilter();
+    if (!allLeads.length) { showFetchError("No data found in sheet."); return; }
+    buildGlobalMonthFilter();
     applyGlobalFilter();
     renderAll();
   } catch (e) {
-    showFetchError("Failed to load data: " + e.message);
+    showFetchError("Failed to load: " + e.message);
   } finally {
     setLoading(false);
   }
@@ -97,51 +81,44 @@ async function fetchData() {
 function parseCSV(text) {
   var lines = text.trim().split("\n");
   if (lines.length < 2) return [];
-
-  // Parse header — handle \r
-  var headers = splitCSVRow(lines[0]).map(h => h.trim().replace(/\r/g, ""));
-
-  // Map header name → column index
+  var headers = splitCSVRow(lines[0]).map(h => h.trim().replace(/\r/g,""));
   var idx = {};
-  Object.keys(COL).forEach(function (k) {
-    var i = headers.indexOf(COL[k]);
-    idx[k] = i; // -1 if not found
-  });
+  Object.keys(COL).forEach(k => { idx[k] = headers.indexOf(COL[k]); });
 
   var leads = [];
   for (var r = 1; r < lines.length; r++) {
     var row = splitCSVRow(lines[r]);
     if (!row || row.length < 2) continue;
-
     function get(k) {
       var i = idx[k];
-      return i >= 0 && i < row.length ? row[i].trim().replace(/\r/g, "") : "";
+      return i >= 0 && i < row.length ? row[i].trim().replace(/\r/g,"") : "";
     }
-
     var ref = get("ref");
-    if (!ref) continue; // skip blank rows
+    if (!ref) continue;
 
-    // Parse timestamp — handles "DD/MM/YYYY HH:MM:SS", "M/D/YYYY H:MM:SS", ISO, etc.
-    var ts  = parseTimestamp(get("timestamp"));
-    var bill = parseFloat(get("bill")) || 0;
+    // Employee key = code (primary) — falls back to name if no code
+    // This prevents name-spelling duplicates
+    var empCode = get("empCode").trim();
+    var empName = get("empName").trim();
+    var empKey  = empCode || empName; // used for deduplication
 
-    leads.push({
-      refNumber:    ref,
-      timestamp:    ts,          // Date object or null
-      employeeName: get("empName"),
-      employeeCode: get("empCode"),
-      designation:  get("desig"),
-      companyName:  get("company"),
-      branchName:   get("branch"),
-      customerName: get("custName"),
-      monthlyBill:  bill,
-      status:       get("status") || "Submitted"
-    });
+// Inside your parseCSV function, update the leads.push section:
+leads.push({
+  refNumber:    ref,
+  timestamp:    parseTimestamp(get("timestamp")),
+  employeeName: empName,
+  employeeCode: empCode,
+  empKey:       empKey,
+  companyName:  get("company").trim(), // Ensure this is trimmed
+  branchName:   get("branch").trim(),  // Ensure this is trimmed
+  customerName: get("custName"),
+  monthlyBill:  parseFloat(get("bill")) || 0,
+  status:       get("status") || "Submitted"
+});
   }
   return leads;
 }
 
-// Split a CSV row respecting quoted fields
 function splitCSVRow(line) {
   var result = [], cur = "", inQ = false;
   for (var i = 0; i < line.length; i++) {
@@ -149,71 +126,43 @@ function splitCSVRow(line) {
     if (ch === '"') {
       if (inQ && line[i+1] === '"') { cur += '"'; i++; }
       else inQ = !inQ;
-    } else if (ch === ',' && !inQ) {
-      result.push(cur); cur = "";
-    } else {
-      cur += ch;
-    }
+    } else if (ch === ',' && !inQ) { result.push(cur); cur = ""; }
+    else cur += ch;
   }
   result.push(cur);
   return result;
 }
 
-// Parse timestamp — always treats DD/MM/YYYY format (never MM/DD)
+// Always DD/MM/YYYY — never trust native Date parse for this format
 function parseTimestamp(s) {
   if (!s) return null;
-  s = s.trim().replace(/\r/g, "");
-
-  // DD/MM/YYYY HH:MM:SS  (primary format from your sheet)
+  s = s.trim().replace(/\r/g,"");
   var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
   if (m) {
-    var d = new Date(
-      parseInt(m[3]),        // year
-      parseInt(m[2]) - 1,   // month (0-based) — m[2] is MM
-      parseInt(m[1]),        // day               — m[1] is DD
-      parseInt(m[4] || 0),
-      parseInt(m[5] || 0),
-      parseInt(m[6] || 0)
-    );
+    var d = new Date(+m[3], +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0), +(m[6]||0));
     if (!isNaN(d)) return d;
   }
-
-  // ISO / other formats fallback
   var d2 = new Date(s);
-  if (!isNaN(d2)) return d2;
-
-  return null;
+  return isNaN(d2) ? null : d2;
 }
 
-// ── MONTH KEY from Date ───────────────────────────────────────
-function monthKey(d) {
-  if (!d || isNaN(d)) return null;
-  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-}
-function monthLabel(key) {
-  if (!key) return "Unknown";
-  var [y, m] = key.split("-");
-  return new Date(y, m - 1).toLocaleString("en-IN", { month: "short", year: "numeric" });
-}
-function monthLabelShort(key) {
-  if (!key) return "?";
-  var [y, m] = key.split("-");
-  return new Date(y, m - 1).toLocaleString("en-IN", { month: "short", year: "2-digit" });
-}
+// ── DATE HELPERS ──────────────────────────────────────────────
+function monthKey(d)      { if (!d||isNaN(d)) return null; return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
+function monthLabel(k)    { if (!k) return "?"; var [y,m]=k.split("-"); return new Date(y,m-1).toLocaleString("en-IN",{month:"short",year:"numeric"}); }
+function monthLabelShort(k){ if (!k) return "?"; var [y,m]=k.split("-"); return new Date(y,m-1).toLocaleString("en-IN",{month:"short",year:"2-digit"}); }
 
-// ── ALL MONTH KEYS (sorted) ───────────────────────────────────
 function allMonthKeys() {
-  var set = {};
-  allLeads.forEach(l => { var k = monthKey(l.timestamp); if (k) set[k] = 1; });
+  var set={};
+  allLeads.forEach(l=>{ var k=monthKey(l.timestamp); if(k) set[k]=1; });
   return Object.keys(set).sort();
 }
 
 // ── GLOBAL MONTH FILTER ───────────────────────────────────────
-function buildMonthFilter() {
+function buildGlobalMonthFilter() {
   var keys = allMonthKeys().reverse();
   var sel  = document.getElementById("globalMonthFilter");
   sel.innerHTML = '<option value="all">All Months</option>' +
-    keys.map(k => `<option value="${k}">${monthLabel(k)}</option>`).join("");
+    keys.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join("");
   sel.value = selectedMonth;
 }
 
@@ -230,16 +179,18 @@ function applyGlobalFilter() {
     : allLeads.filter(l => monthKey(l.timestamp) === selectedMonth);
 }
 
-function leadsForMonth(mk) {
-  return mk === "all" ? allLeads.slice() : allLeads.filter(l => monthKey(l.timestamp) === mk);
+// Leads for a specific month key (used by per-panel filters)
+function leadsFor(mk, srcLeads) {
+  srcLeads = srcLeads || allLeads;
+  return mk === "all" ? srcLeads.slice() : srcLeads.filter(l => monthKey(l.timestamp) === mk);
 }
 
-// ── PANEL MONTH SELECT HTML ───────────────────────────────────
-function panelMonthSelect(id, val, onchange) {
+// Panel-level month <select> HTML
+function panelMonthSel(id, val, fn) {
   var keys = allMonthKeys().reverse();
-  return `<select id="${id}" class="panel-month-sel" onchange="${onchange}">
+  return `<select id="${id}" class="panel-month-sel" onchange="${fn}">
     <option value="all">All Months</option>
-    ${keys.map(k => `<option value="${k}" ${val===k?"selected":""}>${monthLabelShort(k)}</option>`).join("")}
+    ${keys.map(k=>`<option value="${k}"${val===k?" selected":""}>${monthLabelShort(k)}</option>`).join("")}
   </select>`;
 }
 
@@ -248,212 +199,215 @@ function renderAll() {
   document.getElementById("fetchError").classList.add("hidden");
   renderKPIs();
   renderMonthWise();
-  renderStatusBreakdown();
+  renderPipelineStatus();
   renderCompanyWise();
   renderBranchWise();
   renderTopPerformers();
   renderBillRanges();
-  renderRecentLeads();
 }
 
-// ── KPI CARDS ─────────────────────────────────────────────────
+// ── 1. KPI SNAPSHOT ───────────────────────────────────────────
 function renderKPIs() {
   var L         = filteredLeads;
   var total     = L.length;
-  var installed = L.filter(l => l.status === "Installed").length;
-  var rejected  = L.filter(l => l.status === "Rejected").length;
+  var installed = L.filter(l=>l.status==="Installed").length;
+  var rejected  = L.filter(l=>l.status==="Rejected").length;
   var inProg    = total - installed - rejected;
-  var conv      = total > 0 ? ((installed / total) * 100).toFixed(1) : "0.0";
-  var eligible  = L.filter(l => l.monthlyBill >= 3000).length;
+  var conv      = total>0?((installed/total)*100).toFixed(1):"0.0";
+  var eligible  = L.filter(l=>l.monthlyBill>=3000).length;
 
   document.getElementById("kpiGrid").innerHTML = [
-    { icon:"📋", label:"Total Leads",       val:total,      color:"sky"  },
-    { icon:"✅", label:"Installed",          val:installed,  color:"leaf" },
-    { icon:"🔄", label:"In Progress",        val:inProg,     color:"sun"  },
-    { icon:"📈", label:"Conversion Rate",    val:conv+"%",   color:"leaf" },
-    { icon:"🏦", label:"Incentive Eligible", val:eligible,   color:"sky"  },
-    { icon:"❌", label:"Rejected",           val:rejected,   color:"red"  },
-  ].map(k => `<div class="kpi kpi-${k.color}">
+    {icon:"📋",label:"Total Leads",       val:total,     color:"sky" },
+    {icon:"✅",label:"Installed",          val:installed, color:"leaf"},
+    {icon:"🔄",label:"In Progress",        val:inProg,    color:"sun" },
+    {icon:"📈",label:"Conversion %",       val:conv+"%",  color:"leaf"},
+    {icon:"🏦",label:"Incentive Eligible", val:eligible,  color:"sky" },
+    {icon:"❌",label:"Rejected",           val:rejected,  color:"red" },
+  ].map(k=>`<div class="kpi kpi-${k.color}">
     <div class="kpi-icon">${k.icon}</div>
     <div class="kpi-val">${k.val}</div>
     <div class="kpi-label">${k.label}</div>
   </div>`).join("");
 }
 
-// ── MONTH-WISE OVERVIEW ───────────────────────────────────────
+// ── 2. MONTH-WISE OVERVIEW (bar chart — always all data) ──────
 function renderMonthWise() {
-  var map = {};
-  allLeads.forEach(function (l) {
-    var k = monthKey(l.timestamp);
-    if (k) map[k] = (map[k] || 0) + 1;
-  });
+  var map={};
+  allLeads.forEach(l=>{ var k=monthKey(l.timestamp); if(k) map[k]=(map[k]||0)+1; });
   var keys   = Object.keys(map).sort();
   var labels = keys.map(monthLabelShort);
-  var vals   = keys.map(k => map[k]);
-
+  var vals   = keys.map(k=>map[k]);
   renderBarChart("chartMonthWise", labels, vals, "#0B3954");
   renderTable("tableMonthWise",
-    ["Month", "Total Leads"],
-    keys.map((k, i) => [monthLabel(k), vals[i]])
+    ["Month","Total Leads"],
+    keys.map((k,i)=>[monthLabel(k), vals[i]])
   );
 }
 
-// ── STATUS BREAKDOWN ──────────────────────────────────────────
-function renderStatusBreakdown() {
+// ── 3. PIPELINE STATUS (horizontal bars) ─────────────────────
+function renderPipelineStatus() {
   var L        = filteredLeads;
+  var total    = L.length;
   var statuses = ["Submitted","Contacting Customer","Field Visit","Work Order Received","Installed","Rejected"];
   var colors   = ["#1A5276","#7D6608","#76448A","#1F618D","#1E8449","#922B21"];
-  var total    = L.length;
-  document.getElementById("statusBreakdown").innerHTML = statuses.map(function (s, i) {
-    var cnt = L.filter(l => l.status === s).length;
-    var pct = total > 0 ? (cnt / total * 100) : 0;
+  document.getElementById("statusBreakdown").innerHTML = statuses.map(function(s,i){
+    var cnt = L.filter(l=>l.status===s).length;
+    var pct = total>0?(cnt/total*100):0;
     return `<div class="status-row">
       <div class="status-label">${s}</div>
       <div class="status-bar-wrap"><div class="status-bar-fill" style="width:${pct}%;background:${colors[i]}"></div></div>
-      <div class="status-count">${cnt}</div>
-      <div class="status-pct">${pct.toFixed(1)}%</div>
+      <div class="status-nums"><span class="status-count">${cnt}</span><span class="status-pct">${pct.toFixed(1)}%</span></div>
     </div>`;
   }).join("");
 }
 
-// ── COMPANY-WISE ──────────────────────────────────────────────
+// ── 4. COMPANY-WISE (table only, monthly filter, month matrix) ─
 function renderCompanyWise() {
-  var L       = leadsForMonth(companyMonth);
-  var mkeys   = allMonthKeys();
-  var companies = [...new Set(allLeads.map(l => l.companyName || "Unknown"))].sort();
-
-  // Summary
-  var summary = {};
-  L.forEach(l => { var c = l.companyName||"Unknown"; summary[c] = (summary[c]||0)+1; });
-  var sumEntries = Object.entries(summary).sort((a,b) => b[1]-a[1]);
+  var L     = leadsFor(companyMonth);
   var total = L.length;
+  var mkeys = allMonthKeys();
 
-  // Matrix (all data, not filtered)
-  var matrixRows = companies.map(function (co) {
-    var cells    = mkeys.map(mk => allLeads.filter(l => (l.companyName||"Unknown")===co && monthKey(l.timestamp)===mk).length);
-    var rowTotal = allLeads.filter(l => (l.companyName||"Unknown")===co).length;
-    return { co, cells, rowTotal };
-  }).filter(r => r.rowTotal > 0).sort((a,b) => b.rowTotal - a.rowTotal);
+  // Per-company summary (filtered)
+  var map={};
+  L.forEach(l=>{ var c=l.companyName||"Unknown"; map[c]=(map[c]||0)+1; });
+  var entries = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+
+  // Month × Company matrix (always all data for full picture)
+  var companies = [...new Set(allLeads.map(l=>l.companyName||"Unknown"))].sort();
+  var matrixRows = companies.map(function(co){
+    var cells    = mkeys.map(mk=>allLeads.filter(l=>(l.companyName||"Unknown")===co&&monthKey(l.timestamp)===mk).length);
+    var rowTotal = cells.reduce((a,b)=>a+b,0);
+    return {co,cells,rowTotal};
+  }).filter(r=>r.rowTotal>0).sort((a,b)=>b.rowTotal-a.rowTotal);
 
   document.getElementById("companyWisePanel").innerHTML = `
     <div class="panel-header">
       <div class="rcard-title"><span class="rcard-icon">🏢</span> Company-wise Leads</div>
-      <div class="panel-controls">${panelMonthSelect("companyMonthSel", companyMonth, "onCompanyMonthChange()")}</div>
+      <div class="panel-controls">${panelMonthSel("companyMonthSel",companyMonth,"onCompanyMonthChange()")}</div>
     </div>
-    <canvas id="chartCompanyWise"></canvas>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>Company</th><th>Leads</th><th>Share</th></tr></thead>
-      <tbody>${sumEntries.map(([name, cnt]) =>
-        `<tr><td><strong>${esc(name)}</strong></td>
-         <td><span class="drill-link" onclick="drillCompany('${esc(name)}')">${cnt}</span></td>
-         <td>${total>0?((cnt/total)*100).toFixed(1):0}%</td></tr>`
-      ).join("") || noData(3)}</tbody>
+      <thead><tr><th>Company</th><th>Leads</th><th>Share</th><th>Action</th></tr></thead>
+      <tbody>${entries.map(([name,cnt])=>`<tr>
+        <td><strong>${esc(name)}</strong></td>
+        <td>${cnt}</td>
+        <td>${total>0?((cnt/total)*100).toFixed(1):0}%</td>
+        <td><span class="drill-link" onclick="drillCompany('${esc(name)}','${esc(companyMonth)}')">👥 Employees</span></td>
+      </tr>`).join("")||noData(4)}</tbody>
     </table></div>
-    <div class="section-sub-title">Month-wise Breakdown (All Time)</div>
+    <div class="section-sub-title">Month-wise Breakdown — All Time</div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>Company</th>${mkeys.map(k=>`<th>${monthLabelShort(k)}</th>`).join("")}<th>Total</th></tr></thead>
-      <tbody>${matrixRows.map(r =>
-        `<tr><td><strong>${esc(r.co)}</strong></td>${r.cells.map(c=>`<td>${c||"—"}</td>`).join("")}<td><strong>${r.rowTotal}</strong></td></tr>`
-      ).join("") || noData(mkeys.length+2)}</tbody>
+      <tbody>${matrixRows.map(r=>`<tr>
+        <td><strong>${esc(r.co)}</strong></td>
+        ${r.cells.map(c=>`<td>${c||"—"}</td>`).join("")}
+        <td><strong>${r.rowTotal}</strong></td>
+      </tr>`).join("")||noData(mkeys.length+2)}</tbody>
     </table></div>`;
-
-  renderBarChart("chartCompanyWise", sumEntries.map(e=>e[0]), sumEntries.map(e=>e[1]), "#F5A623");
 }
-function onCompanyMonthChange() { companyMonth = document.getElementById("companyMonthSel").value; renderCompanyWise(); }
+function onCompanyMonthChange(){
+  companyMonth=document.getElementById("companyMonthSel").value;
+  renderCompanyWise();
+}
 
-// ── BRANCH-WISE ───────────────────────────────────────────────
+// ── 5. BRANCH-WISE (company selector → filtered branches) ─────
 function renderBranchWise() {
-  var L       = leadsForMonth(branchMonth);
-  var mkeys   = allMonthKeys();
-  var branches = [...new Set(allLeads.map(l => (l.branchName||"Unknown").trim()))].sort();
+  var mkeys     = allMonthKeys();
+  var companies = ["all",...[...new Set(allLeads.map(l=>l.companyName||"Unknown"))].sort()];
 
-  var map = {};
-  L.forEach(function (l) {
-    var b = (l.branchName||"Unknown").trim();
-    if (!map[b]) map[b] = { leads:0, installed:0, inProg:0, rejected:0 };
+  // Source leads: filter by selected company first, then by month
+  var srcLeads = selectedCompanyForBranch==="all"
+    ? allLeads
+    : allLeads.filter(l=>(l.companyName||"Unknown")===selectedCompanyForBranch);
+  var L = leadsFor(branchMonth, srcLeads);
+
+  // Branch summary
+  var map={};
+  L.forEach(function(l){
+    var b=(l.branchName||"Unknown").trim();
+    if(!map[b]) map[b]={leads:0,installed:0,inProg:0,rejected:0};
     map[b].leads++;
-    if (l.status==="Installed")  map[b].installed++;
-    else if (l.status==="Rejected") map[b].rejected++;
-    else map[b].inProg++;
+    if(l.status==="Installed")       map[b].installed++;
+    else if(l.status==="Rejected")   map[b].rejected++;
+    else                              map[b].inProg++;
   });
-  var entries = Object.entries(map).sort((a,b)=>b[1].leads-a[1].leads).slice(0,15);
+  var entries=Object.entries(map).sort((a,b)=>b[1].leads-a[1].leads);
 
-  var matrixRows = branches.map(function (br) {
-    var cells    = mkeys.map(mk => allLeads.filter(l => (l.branchName||"Unknown").trim()===br && monthKey(l.timestamp)===mk).length);
-    var rowTotal = allLeads.filter(l => (l.branchName||"Unknown").trim()===br).length;
-    return { br, cells, rowTotal };
+  // Month × Branch matrix (scoped to selected company, all months)
+  var branches=[...new Set(srcLeads.map(l=>(l.branchName||"Unknown").trim()))].sort();
+  var matrixRows = branches.map(function(br){
+    var cells    = mkeys.map(mk=>srcLeads.filter(l=>(l.branchName||"Unknown").trim()===br&&monthKey(l.timestamp)===mk).length);
+    var rowTotal = cells.reduce((a,b)=>a+b,0);
+    return {br,cells,rowTotal};
   }).filter(r=>r.rowTotal>0).sort((a,b)=>b.rowTotal-a.rowTotal);
+
+  // Company select options
+  var coOpts = companies.map(c=>`<option value="${esc(c)}"${selectedCompanyForBranch===c?" selected":""}>${c==="all"?"All Companies":esc(c)}</option>`).join("");
 
   document.getElementById("branchWisePanel").innerHTML = `
     <div class="panel-header">
       <div class="rcard-title"><span class="rcard-icon">📍</span> Branch-wise Performance</div>
-      <div class="panel-controls">${panelMonthSelect("branchMonthSel", branchMonth, "onBranchMonthChange()")}</div>
+      <div class="panel-controls">
+        <select id="branchCompanySel" class="panel-month-sel" onchange="onBranchCompanyChange()">${coOpts}</select>
+        ${panelMonthSel("branchMonthSel",branchMonth,"onBranchMonthChange()")}
+      </div>
     </div>
-    <canvas id="chartBranchWise"></canvas>
     <div class="tbl-wrap"><table>
       <thead><tr><th>Branch</th><th>Total</th><th>Installed</th><th>In Progress</th><th>Rejected</th><th>Conv%</th></tr></thead>
-      <tbody>${entries.map(([name, d]) =>
-        `<tr><td><strong>${esc(name)}</strong></td><td>${d.leads}</td><td>${d.installed}</td><td>${d.inProg}</td><td>${d.rejected}</td>
-         <td>${d.leads>0?((d.installed/d.leads)*100).toFixed(0):0}%</td></tr>`
-      ).join("") || noData(6)}</tbody>
+      <tbody>${entries.map(([name,d])=>`<tr>
+        <td><strong>${esc(name)}</strong></td>
+        <td>${d.leads}</td><td>${d.installed}</td><td>${d.inProg}</td><td>${d.rejected}</td>
+        <td>${d.leads>0?((d.installed/d.leads)*100).toFixed(0):0}%</td>
+      </tr>`).join("")||noData(6)}</tbody>
     </table></div>
-    <div class="section-sub-title">Month-wise Breakdown (All Time)</div>
+    <div class="section-sub-title">Month-wise Breakdown — All Time${selectedCompanyForBranch!=="all"?" ("+esc(selectedCompanyForBranch)+")":""}</div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>Branch</th>${mkeys.map(k=>`<th>${monthLabelShort(k)}</th>`).join("")}<th>Total</th></tr></thead>
-      <tbody>${matrixRows.map(r =>
-        `<tr><td><strong>${esc(r.br)}</strong></td>${r.cells.map(c=>`<td>${c||"—"}</td>`).join("")}<td><strong>${r.rowTotal}</strong></td></tr>`
-      ).join("") || noData(mkeys.length+2)}</tbody>
+      <tbody>${matrixRows.map(r=>`<tr>
+        <td><strong>${esc(r.br)}</strong></td>
+        ${r.cells.map(c=>`<td>${c||"—"}</td>`).join("")}
+        <td><strong>${r.rowTotal}</strong></td>
+      </tr>`).join("")||noData(mkeys.length+2)}</tbody>
     </table></div>`;
-
-  renderBarChart("chartBranchWise", entries.map(e=>e[0]), entries.map(e=>e[1].leads), "#27AE60");
 }
-function onBranchMonthChange() { branchMonth = document.getElementById("branchMonthSel").value; renderBranchWise(); }
+function onBranchCompanyChange(){
+  selectedCompanyForBranch=document.getElementById("branchCompanySel").value;
+  renderBranchWise();
+}
+function onBranchMonthChange(){
+  branchMonth=document.getElementById("branchMonthSel").value;
+  renderBranchWise();
+}
 
-// ── TOP PERFORMERS ────────────────────────────────────────────
+// ── 6. TOP PERFORMERS (keyed by empCode, deduped) ─────────────
 function renderTopPerformers() {
-  var L     = leadsForMonth(perfMonth);
-  var mkeys = allMonthKeys();
+  var L = leadsFor(perfMonth);
 
-  // All unique employees from full data
-  var empSet = {};
-  allLeads.forEach(function (l) {
-    var key = (l.employeeName||"Unknown").trim() + "||" + (l.employeeCode||"").trim();
-    if (!empSet[key]) empSet[key] = { name:(l.employeeName||"Unknown").trim(), code:(l.employeeCode||"").trim() };
+  // Key is empCode (if exists) else empName — prevents name-spelling duplicates
+  var map={};
+  L.forEach(function(l){
+    var key = l.empKey;  // set at parse time: code || name
+    if(!map[key]) map[key]={
+      name: l.employeeName, code: l.employeeCode,
+      leads:0, installed:0, company:l.companyName||"", branch:l.branchName||""
+    };
+    // Always keep the most complete name seen for this code
+    if(l.employeeName && map[key].name.length < l.employeeName.length) map[key].name = l.employeeName;
+    map[key].leads++;
+    if(l.status==="Installed") map[key].installed++;
   });
 
-  // Summary for filtered period
-  var summary = {};
-  L.forEach(function (l) {
-    var key = (l.employeeName||"Unknown").trim() + "||" + (l.employeeCode||"").trim();
-    if (!summary[key]) summary[key] = { name:(l.employeeName||"Unknown").trim(), code:(l.employeeCode||"").trim(),
-      leads:0, installed:0, company:l.companyName||"", branch:l.branchName||"" };
-    summary[key].leads++;
-    if (l.status==="Installed") summary[key].installed++;
-  });
-  var top = Object.values(summary).sort((a,b)=>b.leads-a.leads).slice(0,10);
+  var top = Object.values(map).sort((a,b)=>b.leads-a.leads).slice(0,10);
+  var medals=["🥇","🥈","🥉"];
 
-  // Matrix (all employees × all months, unfiltered)
-  var matrixRows = Object.values(empSet).map(function (emp) {
-    var cells = mkeys.map(mk => allLeads.filter(l =>
-      (l.employeeName||"Unknown").trim()===emp.name &&
-      (l.employeeCode||"").trim()===emp.code &&
-      monthKey(l.timestamp)===mk
-    ).length);
-    var rowTotal = cells.reduce((a,b)=>a+b,0);
-    return { emp, cells, rowTotal };
-  }).filter(r=>r.rowTotal>0).sort((a,b)=>b.rowTotal-a.rowTotal);
-
-  var medals = ["🥇","🥈","🥉"];
-  var cardsHtml = top.length ? top.map(function (d, i) {
-    var conv = d.leads > 0 ? ((d.installed/d.leads)*100).toFixed(0) : 0;
+  var cardsHtml = top.length ? top.map(function(d,i){
+    var conv=d.leads>0?((d.installed/d.leads)*100).toFixed(0):0;
     return `<div class="performer-row">
       <div class="performer-rank">${medals[i]||`<span class="rank">#${i+1}</span>`}</div>
       <div class="performer-info">
         <div class="performer-name">${esc(d.name)}</div>
         <div class="performer-meta">
-          ${d.code?`<span class="emp-code">${esc(d.code)}</span>`:""}
-          ${d.company?`· ${esc(d.company)}`:""}
-          ${d.branch?`· ${esc(d.branch)}`:""}
+          ${d.code?`<span class="emp-code">${esc(d.code)}</span> ·`:""}
+          ${esc(d.company)} · ${esc(d.branch)}
         </div>
       </div>
       <div class="performer-stats">
@@ -467,196 +421,147 @@ function renderTopPerformers() {
   document.getElementById("topPerformersPanel").innerHTML = `
     <div class="panel-header">
       <div class="rcard-title"><span class="rcard-icon">🏆</span> Top Performers</div>
-      <div class="panel-controls">${panelMonthSelect("perfMonthSel", perfMonth, "onPerfMonthChange()")}</div>
+      <div class="panel-controls">${panelMonthSel("perfMonthSel",perfMonth,"onPerfMonthChange()")}</div>
     </div>
-    ${cardsHtml}
-    <div class="section-sub-title">Month-wise Breakdown — All Employees (All Time)</div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>Employee</th><th>Code</th>${mkeys.map(k=>`<th>${monthLabelShort(k)}</th>`).join("")}<th>Total</th></tr></thead>
-      <tbody>${matrixRows.map(r =>
-        `<tr><td><strong>${esc(r.emp.name)}</strong></td>
-         <td><span class="emp-code">${esc(r.emp.code)}</span></td>
-         ${r.cells.map(c=>`<td>${c||"—"}</td>`).join("")}
-         <td><strong>${r.rowTotal}</strong></td></tr>`
-      ).join("") || noData(mkeys.length+3)}</tbody>
-    </table></div>`;
+    ${cardsHtml}`;
 }
-function onPerfMonthChange() { perfMonth = document.getElementById("perfMonthSel").value; renderTopPerformers(); }
+function onPerfMonthChange(){ perfMonth=document.getElementById("perfMonthSel").value; renderTopPerformers(); }
 
-// ── BILL RANGES ───────────────────────────────────────────────
+// ── 7. KSEB BILL DISTRIBUTION ─────────────────────────────────
 function renderBillRanges() {
-  var L = filteredLeads;
-  var ranges = [
-    { label:"< ₹1k",    min:0,     max:1000     },
-    { label:"₹1k–3k",   min:1000,  max:3000     },
-    { label:"₹3k–5k",   min:3000,  max:5000     },
-    { label:"₹5k–10k",  min:5000,  max:10000    },
-    { label:"> ₹10k",   min:10000, max:Infinity },
+  var L=filteredLeads;
+  var ranges=[
+    {label:"< ₹1k",  min:0,    max:1000    },
+    {label:"₹1k–3k", min:1000, max:3000    },
+    {label:"₹3k–5k", min:3000, max:5000    },
+    {label:"₹5k–10k",min:5000, max:10000   },
+    {label:"> ₹10k", min:10000,max:Infinity},
   ];
-  var counts = ranges.map(r => L.filter(l => l.monthlyBill >= r.min && l.monthlyBill < r.max).length);
+  var counts=ranges.map(r=>L.filter(l=>l.monthlyBill>=r.min&&l.monthlyBill<r.max).length);
   renderBarChart("chartBillRange", ranges.map(r=>r.label), counts, "#E8890A");
 }
 
-// ── RECENT LEADS ──────────────────────────────────────────────
-function renderRecentLeads() {
-  var sorted = filteredLeads.slice()
-    .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
-    .slice(0, 20);
-  renderTable("tableRecentLeads",
-    ["Ref No.", "Employee", "Code", "Customer", "Company", "Branch", "Bill ₹", "Status", "Date"],
-    sorted.map(function (l) {
-      var d = l.timestamp;
-      return [
-        esc(l.refNumber),
-        esc(l.employeeName),
-        `<span class="emp-code">${esc(l.employeeCode)}</span>`,
-        esc(l.customerName),
-        esc(l.companyName),
-        esc(l.branchName),
-        l.monthlyBill ? "₹"+l.monthlyBill.toLocaleString("en-IN") : "—",
-        `<span class="badge-${statusKey(l.status)}">${l.status}</span>`,
-        d ? d.toLocaleDateString("en-IN") : "—"
-      ];
-    })
-  );
-}
+// ── DRILL-DOWN: Company → Employee list (month-scoped) ─────────
+function drillCompany(companyName, monthFilter) {
+  // Use exact same filtered set that produced the table row
+  var src = leadsFor(monthFilter||companyMonth).filter(l=>(l.companyName||"Unknown")===companyName);
 
-// ── DRILL-DOWN: Company → Employees ──────────────────────────
-function drillCompany(companyName) {
-  var leads = allLeads.filter(l => (l.companyName||"Unknown") === companyName);
-  var empMap = {};
-  leads.forEach(function (l) {
-    var key = (l.employeeName||"Unknown").trim() + "||" + (l.employeeCode||"").trim();
-    if (!empMap[key]) empMap[key] = { name:(l.employeeName||"Unknown").trim(), code:(l.employeeCode||"").trim(),
-      branch:l.branchName||"", leads:0, installed:0 };
-    empMap[key].leads++;
-    if (l.status==="Installed") empMap[key].installed++;
+  // Group strictly by empKey (code-first)
+  var map={};
+  src.forEach(function(l){
+    var key=l.empKey;
+    if(!map[key]) map[key]={name:l.employeeName,code:l.employeeCode,branch:l.branchName||"",leads:0,installed:0};
+    if(l.employeeName&&map[key].name.length<l.employeeName.length) map[key].name=l.employeeName;
+    map[key].leads++;
+    if(l.status==="Installed") map[key].installed++;
   });
-  var rows  = Object.values(empMap).sort((a,b)=>b.leads-a.leads);
-  var total = leads.length;
 
-  document.getElementById("drillTitle").textContent = companyName + " — Employee Breakdown";
-  document.getElementById("drillBody").innerHTML = `
-    <div class="drill-summary">
-      <span>Total Leads: <strong>${total}</strong></span>
-      <span>Employees Active: <strong>${rows.length}</strong></span>
-    </div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>Employee Name</th><th>Code</th><th>Branch</th><th>Leads</th><th>Share</th><th>Installed</th><th>Conv%</th></tr></thead>
-      <tbody>${rows.map(r => {
-        var conv  = r.leads>0?((r.installed/r.leads)*100).toFixed(0):0;
-        var share = total>0?((r.leads/total)*100).toFixed(1):0;
-        return `<tr>
-          <td><strong>${esc(r.name)}</strong></td>
-          <td><span class="emp-code">${esc(r.code)}</span></td>
-          <td>${esc(r.branch)}</td>
-          <td>${r.leads}</td><td>${share}%</td><td>${r.installed}</td><td>${conv}%</td>
-        </tr>`;
-      }).join("") || noData(7)}</tbody>
-    </table></div>`;
-  document.getElementById("drillModal").classList.remove("hidden");
+  var rows =Object.values(map).sort((a,b)=>b.leads-a.leads);
+  var total=src.length;
+
+  // Show modal (inline, no separate modal element needed — use a simple overlay div)
+  var overlay=document.getElementById("drillOverlay");
+  overlay.innerHTML=`
+    <div class="drill-box">
+      <div class="drill-header">
+        <div>
+          <div class="drill-title">${esc(companyName)}</div>
+          <div class="drill-sub">Employee Breakdown${monthFilter&&monthFilter!=="all"?" · "+monthLabel(monthFilter):""}</div>
+        </div>
+        <button class="drill-close" onclick="document.getElementById('drillOverlay').classList.add('hidden')">✕</button>
+      </div>
+      <div class="drill-stats">
+        <span>Total Leads: <strong>${total}</strong></span>
+        <span>Employees: <strong>${rows.length}</strong></span>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Employee</th><th>Code</th><th>Branch</th><th>Leads</th><th>Share</th><th>Installed</th><th>Conv%</th></tr></thead>
+        <tbody>${rows.map(function(r){
+          var conv =r.leads>0?((r.installed/r.leads)*100).toFixed(0):0;
+          var share=total>0?((r.leads/total)*100).toFixed(1):0;
+          return `<tr>
+            <td><strong>${esc(r.name)}</strong></td>
+            <td><span class="emp-code">${esc(r.code)}</span></td>
+            <td>${esc(r.branch)}</td>
+            <td>${r.leads}</td><td>${share}%</td>
+            <td>${r.installed}</td><td>${conv}%</td>
+          </tr>`;
+        }).join("")||noData(7)}</tbody>
+      </table></div>
+    </div>`;
+  overlay.classList.remove("hidden");
+  overlay.onclick=function(e){ if(e.target===overlay) overlay.classList.add("hidden"); };
 }
-function closeDrill() { document.getElementById("drillModal").classList.add("hidden"); }
 
-// ── CHART ─────────────────────────────────────────────────────
+// ── BAR CHART ─────────────────────────────────────────────────
 function renderBarChart(canvasId, labels, values, color) {
-  var canvas = document.getElementById(canvasId);
-  if (!canvas) return;
-  // Wait for layout then draw
-  requestAnimationFrame(function () {
-    var ctx  = canvas.getContext("2d");
-    var W    = canvas.width  = canvas.offsetWidth || 300;
-    var H    = canvas.height = 220;
-    var pad  = { top:24, right:16, bottom:64, left:46 };
-    var maxV = Math.max(...values, 1);
-    var n    = labels.length;
-    var slot = n > 0 ? (W - pad.left - pad.right) / n : 0;
-    var bw   = slot * 0.6;
-    var gap  = slot * 0.4;
+  var canvas=document.getElementById(canvasId);
+  if(!canvas) return;
+  requestAnimationFrame(function(){
+    var ctx =canvas.getContext("2d");
+    var W   =canvas.width =canvas.offsetWidth||300;
+    var H   =canvas.height=220;
+    var pad ={top:24,right:16,bottom:64,left:46};
+    var maxV=Math.max(...values,1);
+    var n   =labels.length;
+    var slot=n>0?(W-pad.left-pad.right)/n:0;
+    var bw  =slot*0.6, gap=slot*0.4;
 
-    ctx.clearRect(0, 0, W, H);
-
-    // Grid lines + Y labels
-    for (var g = 0; g <= 4; g++) {
-      var gy = pad.top + (H - pad.top - pad.bottom) * g / 4;
-      ctx.strokeStyle = "#DDE4E4"; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(W - pad.right, gy); ctx.stroke();
-      ctx.fillStyle = "#6B7C7C"; ctx.font = "11px DM Sans,sans-serif"; ctx.textAlign = "right";
-      ctx.fillText(Math.round(maxV * (1 - g / 4)), pad.left - 6, gy + 4);
+    ctx.clearRect(0,0,W,H);
+    for(var g=0;g<=4;g++){
+      var gy=pad.top+(H-pad.top-pad.bottom)*g/4;
+      ctx.strokeStyle="#DDE4E4";ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(pad.left,gy);ctx.lineTo(W-pad.right,gy);ctx.stroke();
+      ctx.fillStyle="#6B7C7C";ctx.font="11px DM Sans,sans-serif";ctx.textAlign="right";
+      ctx.fillText(Math.round(maxV*(1-g/4)),pad.left-6,gy+4);
     }
-
-    // Bars
-    values.forEach(function (v, i) {
-      var x  = pad.left + i * slot + gap / 2;
-      var bh = v > 0 ? (H - pad.top - pad.bottom) * (v / maxV) : 0;
-      var y  = H - pad.bottom - bh;
-
-      if (bh > 0) {
-        ctx.fillStyle = color; ctx.globalAlpha = 0.88;
-        roundRect(ctx, x, y, bw, bh, 4); ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = "#1C2B2B"; ctx.font = "bold 11px DM Sans,sans-serif"; ctx.textAlign = "center";
-        ctx.fillText(v, x + bw / 2, y - 5);
+    values.forEach(function(v,i){
+      var x =pad.left+i*slot+gap/2;
+      var bh=v>0?(H-pad.top-pad.bottom)*(v/maxV):0;
+      var y =H-pad.bottom-bh;
+      if(bh>0){
+        ctx.fillStyle=color;ctx.globalAlpha=0.88;
+        rRect(ctx,x,y,bw,bh,4);ctx.fill();ctx.globalAlpha=1;
+        ctx.fillStyle="#1C2B2B";ctx.font="bold 11px DM Sans,sans-serif";ctx.textAlign="center";
+        ctx.fillText(v,x+bw/2,y-5);
       }
-
-      // X label
-      ctx.fillStyle = "#6B7C7C"; ctx.font = "11px DM Sans,sans-serif"; ctx.textAlign = "center";
-      ctx.globalAlpha = 1;
-      var lbl = String(labels[i] || "");
-      if (lbl.length > 12) lbl = lbl.slice(0, 11) + "…";
-      ctx.save();
-      ctx.translate(x + bw / 2, H - pad.bottom + 12);
-      if (n > 5) { ctx.rotate(-0.45); ctx.textAlign = "right"; }
-      ctx.fillText(lbl, 0, 0);
-      ctx.restore();
+      ctx.fillStyle="#6B7C7C";ctx.font="11px DM Sans,sans-serif";ctx.textAlign="center";ctx.globalAlpha=1;
+      var lbl=String(labels[i]||"");if(lbl.length>12) lbl=lbl.slice(0,11)+"…";
+      ctx.save();ctx.translate(x+bw/2,H-pad.bottom+12);
+      if(n>5){ctx.rotate(-0.45);ctx.textAlign="right";}
+      ctx.fillText(lbl,0,0);ctx.restore();
     });
   });
 }
-
-function roundRect(ctx, x, y, w, h, r) {
-  if (w < 1 || h < 1) return;
-  if (h < r) r = h; if (w < r*2) r = w/2;
-  ctx.beginPath();
-  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
-  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-  ctx.lineTo(x+w,y+h); ctx.lineTo(x,y+h); ctx.lineTo(x,y+r);
-  ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+function rRect(ctx,x,y,w,h,r){
+  if(w<1||h<1)return;if(h<r)r=h;if(w<r*2)r=w/2;
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h);
+  ctx.lineTo(x,y+h);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
 }
 
 // ── TABLE RENDERER ────────────────────────────────────────────
 function renderTable(id, headers, rows) {
-  var el = document.getElementById(id);
-  if (!el) return;
-  el.innerHTML = `<div class="tbl-wrap"><table>
+  var el=document.getElementById(id);
+  if(!el) return;
+  el.innerHTML=`<div class="tbl-wrap"><table>
     <thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-    <tbody>${rows.length
-      ? rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")
-      : noData(headers.length)
-    }</tbody>
+    <tbody>${rows.length?rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join(""):noData(headers.length)}</tbody>
   </table></div>`;
 }
 
 // ── REFRESH ───────────────────────────────────────────────────
-function refreshData() {
-  selectedMonth = companyMonth = branchMonth = perfMonth = "all";
-  allLeads = []; filteredLeads = [];
-  document.getElementById("globalMonthFilter").value = "all";
+function refreshData(){
+  selectedMonth=companyMonth=branchMonth=perfMonth="all";
+  selectedCompanyForBranch="all";
+  allLeads=[];filteredLeads=[];
+  document.getElementById("globalMonthFilter").value="all";
   fetchData();
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
-function esc(s) {
-  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-function noData(cols) {
-  return `<tr><td colspan="${cols}" class="empty-cell">No data for selected period</td></tr>`;
-}
-function statusKey(s) {
-  return {"Submitted":"submitted","Contacting Customer":"contacting","Field Visit":"field-visit",
-    "Work Order Received":"work-order","Installed":"installed","Rejected":"rejected"}[s]||"submitted";
-}
-function setLoading(on) { document.getElementById("loadingBar").style.display = on?"block":"none"; }
-function showFetchError(msg) {
-  var el = document.getElementById("fetchError");
-  el.textContent = msg; el.classList.remove("hidden");
-}
+function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function noData(cols){ return `<tr><td colspan="${cols}" class="empty-cell">No data for selected period</td></tr>`; }
+function statusKey(s){ return {"Submitted":"submitted","Contacting Customer":"contacting","Field Visit":"field-visit","Work Order Received":"work-order","Installed":"installed","Rejected":"rejected"}[s]||"submitted"; }
+function setLoading(on){ document.getElementById("loadingBar").style.display=on?"block":"none"; }
+function showFetchError(msg){ var el=document.getElementById("fetchError");el.textContent=msg;el.classList.remove("hidden"); }
