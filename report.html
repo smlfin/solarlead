@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar Lead Reports</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --sun:#F5A623; --sun-deep:#E8890A;
+      --sky:#0B3954; --sky-light:#1A5276;
+      --leaf:#27AE60; --leaf-glow:#2ECC71;
+      --bg:#F9F5EE; --surface:#FFFFFF;
+      --text:#1C2B2B; --muted:#6B7C7C;
+      --border:#DDE4E4; --error:#E74C3C;
+      --radius:14px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    body::before{content:'';position:fixed;top:-120px;right:-120px;width:480px;height:480px;
+      background:radial-gradient(circle,rgba(245,166,35,.14) 0%,transparent 70%);
+      border-radius:50%;pointer-events:none;z-index:0;}
+
+    /* ── NAV ── */
+    .nav-tabs{position:relative;z-index:10;display:flex;justify-content:center;padding:20px 24px 0;gap:6px;}
+    .nav-tab{padding:10px 24px;background:var(--surface);border:1.5px solid var(--border);border-radius:40px;
+      font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:var(--muted);
+      cursor:pointer;transition:all .2s;text-decoration:none;display:flex;align-items:center;gap:8px;}
+    .nav-tab:hover{color:var(--sky);border-color:var(--sky);}
+    .nav-tab.active{background:var(--sky);color:white;border-color:var(--sky);box-shadow:0 4px 16px rgba(11,57,84,.25);}
+
+    /* ── LOGIN ── */
+    .hidden{display:none!important;}
+    .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;z-index:1;}
+    .login-card{background:var(--surface);border-radius:24px;padding:48px 40px;
+      box-shadow:0 8px 48px rgba(11,57,84,.12);border:1px solid rgba(221,228,228,.6);
+      width:100%;max-width:400px;text-align:center;
+      animation:slide-up .4s cubic-bezier(.22,1,.36,1) both;}
+    @keyframes slide-up{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+    .lock-icon{width:64px;height:64px;border-radius:50%;margin:0 auto 20px;
+      background:linear-gradient(135deg,var(--sky),var(--sky-light));
+      display:flex;align-items:center;justify-content:center;font-size:28px;
+      box-shadow:0 6px 24px rgba(11,57,84,.25);}
+    .login-card h2{font-family:'DM Serif Display',serif;font-size:24px;color:var(--sky);margin-bottom:6px;}
+    .login-card p{color:var(--muted);font-size:14px;margin-bottom:28px;}
+    .login-card input{width:100%;padding:13px 16px;border:1.5px solid var(--border);
+      border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:16px;
+      color:var(--text);background:var(--bg);outline:none;
+      transition:border-color .2s,box-shadow .2s;margin-bottom:14px;}
+    .login-card input:focus{border-color:var(--sun);background:#fff;box-shadow:0 0 0 4px rgba(245,166,35,.12);}
+    .btn-login{width:100%;padding:14px;background:linear-gradient(135deg,var(--sky),var(--sky-light));
+      color:white;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;
+      border:none;border-radius:var(--radius);cursor:pointer;
+      transition:transform .15s,box-shadow .15s;box-shadow:0 4px 16px rgba(11,57,84,.25);}
+    .btn-login:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(11,57,84,.35);}
+    .login-error{color:var(--error);font-size:13px;margin-top:10px;font-weight:500;}
+
+    /* ── DASHBOARD ── */
+    .dashboard-wrap{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:32px 24px 80px;}
+
+    .dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:16px;}
+    .dash-title{font-family:'DM Serif Display',serif;font-size:28px;color:var(--sky);}
+    .dash-title span{color:var(--sun-deep);}
+    .dash-subtitle{color:var(--muted);font-size:13px;margin-top:4px;}
+    .dash-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+
+    /* Global month filter */
+    .global-filter-bar{
+      display:flex;align-items:center;gap:12px;
+      background:var(--surface);border:1.5px solid var(--border);
+      border-radius:40px;padding:8px 20px;
+      box-shadow:0 2px 12px rgba(11,57,84,.06);
+      margin-bottom:24px;flex-wrap:wrap;
+    }
+    .global-filter-bar label{font-size:13px;font-weight:600;color:var(--sky);white-space:nowrap;}
+    .global-filter-bar select{
+      padding:6px 32px 6px 12px;border:1.5px solid var(--border);border-radius:8px;
+      font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);
+      background:var(--bg);outline:none;cursor:pointer;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236B7C7C' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 10px center;appearance:none;-webkit-appearance:none;
+    }
+    .global-filter-bar .filter-note{font-size:12px;color:var(--muted);}
+
+    .btn-refresh{padding:10px 20px;background:var(--sky);color:white;border:none;border-radius:40px;
+      font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;
+      transition:all .2s;display:flex;align-items:center;gap:8px;}
+    .btn-refresh:hover{background:var(--sky-light);}
+    .btn-logout{padding:10px 20px;background:transparent;color:var(--muted);
+      border:1.5px solid var(--border);border-radius:40px;
+      font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+    .btn-logout:hover{color:var(--error);border-color:var(--error);}
+
+    /* ── LOADING BAR ── */
+    .loading-bar{height:3px;background:linear-gradient(90deg,var(--sun),var(--leaf-glow));
+      border-radius:2px;margin-bottom:20px;animation:loading-anim 1.2s ease-in-out infinite;}
+    @keyframes loading-anim{0%{opacity:1;}50%{opacity:.4;}100%{opacity:1;}}
+
+    /* ── KPI ── */
+    .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
+    .kpi{background:var(--surface);border-radius:18px;padding:20px 22px;
+      box-shadow:0 2px 16px rgba(11,57,84,.06);border:1px solid rgba(221,228,228,.6);
+      display:flex;flex-direction:column;gap:4px;animation:slide-up .4s cubic-bezier(.22,1,.36,1) both;}
+    .kpi-icon{font-size:22px;margin-bottom:4px;}
+    .kpi-val{font-family:'DM Serif Display',serif;font-size:30px;line-height:1;}
+    .kpi-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+    .kpi-sky .kpi-val{color:var(--sky);}
+    .kpi-leaf .kpi-val{color:var(--leaf);}
+    .kpi-sun .kpi-val{color:var(--sun-deep);}
+    .kpi-red .kpi-val{color:var(--error);}
+
+    /* ── REPORT CARD ── */
+    .rcard{background:var(--surface);border-radius:20px;padding:28px 28px 24px;
+      box-shadow:0 2px 20px rgba(11,57,84,.06);border:1px solid rgba(221,228,228,.6);
+      margin-bottom:22px;animation:slide-up .5s cubic-bezier(.22,1,.36,1) both;}
+    .rcard-title{font-family:'DM Serif Display',serif;font-size:17px;color:var(--sky);
+      display:flex;align-items:center;gap:10px;}
+    .rcard-icon{font-size:18px;}
+
+    /* Panel header with inline filter */
+    .panel-header{display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+    .panel-controls{display:flex;align-items:center;gap:8px;}
+    .panel-month-sel{padding:5px 28px 5px 10px;border:1.5px solid var(--border);border-radius:8px;
+      font-family:'DM Sans',sans-serif;font-size:12px;color:var(--sky);font-weight:600;
+      background:var(--bg);outline:none;cursor:pointer;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230B3954' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 8px center;appearance:none;-webkit-appearance:none;}
+
+    .section-sub-title{font-family:'DM Serif Display',serif;font-size:14px;color:var(--sky);
+      margin:22px 0 10px;padding-top:18px;border-top:2px solid var(--bg);opacity:.8;}
+
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+
+    /* ── CANVAS ── */
+    canvas{width:100%!important;display:block;margin-bottom:16px;}
+
+    /* ── TABLES ── */
+    .tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border);}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th{background:var(--bg);color:var(--sky);font-weight:600;font-size:11px;
+       text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;text-align:left;white-space:nowrap;}
+    td{padding:9px 12px;border-top:1px solid var(--border);color:var(--text);vertical-align:middle;}
+    tr:hover td{background:rgba(11,57,84,.025);}
+    .empty-cell{text-align:center;color:var(--muted);padding:24px!important;font-size:13px;}
+
+    /* Drill-down link */
+    .drill-link{color:var(--sky);font-weight:700;cursor:pointer;text-decoration:underline dotted;
+      text-underline-offset:3px;transition:color .15s;}
+    .drill-link:hover{color:var(--sun-deep);}
+
+    /* Employee code pill */
+    .emp-code{background:rgba(11,57,84,.08);color:var(--sky);font-size:11px;font-weight:600;
+      padding:2px 8px;border-radius:20px;white-space:nowrap;}
+
+    /* ── STATUS BADGES ── */
+    [class^="badge-"]{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+    .badge-submitted{background:#EBF5FB;color:#1A5276;}
+    .badge-contacting{background:#FEF9E7;color:#7D6608;}
+    .badge-field-visit{background:#FDF2F8;color:#76448A;}
+    .badge-work-order{background:#EAF4FB;color:#1F618D;}
+    .badge-installed{background:#EAFAF1;color:#1E8449;}
+    .badge-rejected{background:#FDEDEC;color:#922B21;}
+
+    /* ── STATUS BREAKDOWN BARS ── */
+    .status-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+    .status-label{width:170px;font-size:13px;font-weight:500;flex-shrink:0;}
+    .status-bar-wrap{flex:1;height:10px;background:var(--bg);border-radius:6px;overflow:hidden;}
+    .status-bar-fill{height:100%;border-radius:6px;transition:width .6s ease;}
+    .status-count{width:32px;text-align:right;font-size:13px;font-weight:600;color:var(--sky);}
+    .status-pct{width:44px;text-align:right;font-size:12px;color:var(--muted);}
+
+    /* ── TOP PERFORMERS ── */
+    .performer-row{display:flex;align-items:center;gap:14px;
+      padding:14px 0;border-bottom:1px solid var(--border);}
+    .performer-row:last-child{border-bottom:none;}
+    .performer-rank{font-size:22px;width:32px;text-align:center;flex-shrink:0;}
+    .rank{font-family:'DM Serif Display',serif;font-size:16px;color:var(--muted);}
+    .performer-info{flex:1;min-width:0;}
+    .performer-name{font-weight:600;font-size:14px;color:var(--sky);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .performer-meta{font-size:12px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .performer-stats{display:flex;gap:18px;flex-shrink:0;}
+    .pstat{display:flex;flex-direction:column;align-items:center;}
+    .pstat-val{font-family:'DM Serif Display',serif;font-size:18px;color:var(--sky);line-height:1;}
+    .pstat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+
+    /* ── DRILL-DOWN MODAL ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(11,57,84,.45);
+      display:flex;align-items:center;justify-content:center;
+      z-index:1000;padding:20px;animation:fade-in .2s ease;}
+    @keyframes fade-in{from{opacity:0;}to{opacity:1;}}
+    .modal-box{background:var(--surface);border-radius:20px;
+      width:100%;max-width:760px;max-height:85vh;
+      display:flex;flex-direction:column;
+      box-shadow:0 24px 64px rgba(11,57,84,.25);
+      animation:slide-up .3s cubic-bezier(.22,1,.36,1) both;}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;
+      padding:20px 24px;border-bottom:1px solid var(--border);}
+    .modal-header h3{font-family:'DM Serif Display',serif;font-size:18px;color:var(--sky);}
+    .modal-close{background:none;border:none;font-size:22px;color:var(--muted);
+      cursor:pointer;line-height:1;padding:4px 8px;border-radius:8px;transition:all .15s;}
+    .modal-close:hover{background:var(--bg);color:var(--error);}
+    .modal-body{overflow-y:auto;padding:20px 24px 24px;flex:1;}
+    .drill-summary{display:flex;gap:24px;margin-bottom:16px;
+      background:var(--bg);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--muted);}
+    .drill-summary strong{color:var(--sky);}
+
+    /* ── FETCH ERROR ── */
+    .fetch-error{background:rgba(231,76,60,.08);border:1.5px solid rgba(231,76,60,.25);
+      border-radius:var(--radius);padding:14px 18px;color:#922B21;font-size:14px;margin-bottom:20px;}
+
+    /* ── MOBILE ── */
+    @media(max-width:700px){
+      .kpi-grid{grid-template-columns:repeat(2,1fr);}
+      .two-col{grid-template-columns:1fr;}
+      .status-label{width:110px;font-size:12px;}
+      .performer-stats{gap:10px;}
+      .rcard{padding:18px 14px;}
+      .nav-tabs{padding:14px 14px 0;gap:4px;}
+      .nav-tab{padding:9px 14px;font-size:13px;}
+      .dash-header{flex-direction:column;align-items:flex-start;}
+      .global-filter-bar{padding:8px 14px;}
+      .panel-header{flex-direction:column;align-items:flex-start;}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav-tabs">
+    <a href="index.html" class="nav-tab">☀️ Submit Lead</a>
+    <span class="nav-tab active">📊 Reports</span>
+  </nav>
+
+  <!-- LOGIN -->
+  <div id="loginScreen" class="login-wrap hidden">
+    <div class="login-card">
+      <div class="lock-icon">🔐</div>
+      <h2>Reports Access</h2>
+      <p>This section is password protected.<br>Enter the admin password to continue.</p>
+      <input type="password" id="passwordInput" placeholder="Enter password…" autocomplete="current-password" />
+      <button class="btn-login" onclick="attemptLogin()">Unlock Reports →</button>
+      <div id="loginError" class="login-error hidden">Incorrect password. Please try again.</div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard" class="dashboard-wrap hidden">
+
+    <div class="dash-header">
+      <div>
+        <div class="dash-title">Solar Lead <span>Analytics</span></div>
+        <div class="dash-subtitle">Live data from Google Sheet · Refresh anytime</div>
+      </div>
+      <div class="dash-actions">
+        <button class="btn-refresh" onclick="refreshData()">🔄 Refresh</button>
+        <button class="btn-logout" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- GLOBAL MONTH FILTER -->
+    <div class="global-filter-bar">
+      <label>📅 Filter all panels:</label>
+      <select id="globalMonthFilter" onchange="onGlobalMonthChange()">
+        <option value="all">All Months</option>
+      </select>
+      <span class="filter-note">Each panel also has its own month filter below</span>
+    </div>
+
+    <!-- LOADING -->
+    <div id="loadingBar" class="loading-bar" style="display:none"></div>
+
+    <!-- FETCH ERROR -->
+    <div id="fetchError" class="fetch-error hidden"></div>
+
+    <!-- KPI ROW -->
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <!-- ROW 1: Monthly overview + Status -->
+    <div class="two-col">
+      <div class="rcard">
+        <div class="panel-header">
+          <div class="rcard-title"><span class="rcard-icon">📅</span> Month-wise Overview</div>
+        </div>
+        <canvas id="chartMonthWise"></canvas>
+        <div id="tableMonthWise"></div>
+      </div>
+      <div class="rcard">
+        <div class="panel-header">
+          <div class="rcard-title"><span class="rcard-icon">🔄</span> Pipeline Status</div>
+        </div>
+        <div id="statusBreakdown"></div>
+      </div>
+    </div>
+
+    <!-- COMPANY-WISE — dynamic panel -->
+    <div class="rcard">
+      <div id="companyWisePanel"></div>
+    </div>
+
+    <!-- BRANCH-WISE — dynamic panel -->
+    <div class="rcard">
+      <div id="branchWisePanel"></div>
+    </div>
+
+    <!-- TOP PERFORMERS — dynamic panel -->
+    <div class="rcard">
+      <div id="topPerformersPanel"></div>
+    </div>
+
+    <!-- ROW: Bill Range + Recent -->
+    <div class="two-col">
+      <div class="rcard">
+        <div class="panel-header">
+          <div class="rcard-title"><span class="rcard-icon">⚡</span> KSEB Bill Distribution</div>
+        </div>
+        <canvas id="chartBillRange"></canvas>
+      </div>
+      <div class="rcard" style="grid-column:1/-1;">
+        <div class="panel-header">
+          <div class="rcard-title"><span class="rcard-icon">🕒</span> Recent Leads (Last 20)</div>
+        </div>
+        <div id="tableRecentLeads"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DRILL-DOWN MODAL -->
+  <div id="drillModal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="drillTitle">Company Breakdown</h3>
+        <button class="modal-close" onclick="closeDrill()">✕</button>
+      </div>
+      <div class="modal-body" id="drillBody"></div>
+    </div>
+  </div>
+
+  <script src="report.js"></script>
+</body>
+</html>
