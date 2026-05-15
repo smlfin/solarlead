@@ -638,7 +638,7 @@
 </div>
 
 <script>
-  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwBO4J1SEyzrnBRX0Fp9tl8yzlel-mLrwNdLtunnlgle4MfZgOTUWeYesSI-W83MG-u/exec";
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwGe4Q5TVp9TUMzan7opbKlgNZlwMHkqvFmB6i1ZqETJbwmFmh_C7aunlbUzzBzHoTvQ/exec";
 
   const form             = document.getElementById("leadForm");
   const submitBtn        = document.getElementById("submitBtn");
@@ -784,8 +784,11 @@
         payload.fileType   = chosenFile.type;
       }
       setProgress(60);
-      var response = await fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
-      var result = await response.json();
+      var response = await fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload), redirect: "follow" });
+      var text = await response.text();
+      var result;
+      try { result = JSON.parse(text); }
+      catch(pe) { console.error("GAS raw response:", text); throw new Error("Server error — check Apps Script deployment (Execute as: Me, Access: Anyone)."); }
       setProgress(100);
       uploadingNotice.classList.remove("visible");
       if (result.status !== "success") throw new Error(result.message || "Unknown error");
@@ -829,8 +832,10 @@
     btn.classList.add("loading");
     btn.disabled = true;
     try {
-      var response = await fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "getStatus", refNumber: ref }) });
-      var data = await response.json();
+      var response = await fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "getStatus", refNumber: ref }), redirect: "follow" });
+      var text2 = await response.text();
+      var data;
+      try { data = JSON.parse(text2); } catch(e) { throw new Error("Status check failed"); }
       if (data.status === "found") {
         document.getElementById("statusResultRef").textContent = data.refNumber;
         var badge = document.getElementById("statusBadge");
