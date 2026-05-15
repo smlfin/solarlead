@@ -4,7 +4,7 @@
 // ============================================================
 
 const CSV_URL         = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTY-Kkkau9RrlH2yOF19QavsdqMhxRm7Fso8dkLHrDPg8rOBIPZx18WpqIRRE7asgC7ssx3P3SxUV2E/pub?gid=0&single=true&output=csv";
-const REPORT_PASSWORD = "solar";
+const REPORT_PASSWORD = "solar2025";
 
 const COL = {
   ref:"Ref Number", timestamp:"Timestamp", empName:"Employee Name",
