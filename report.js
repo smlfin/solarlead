@@ -1,4 +1,3 @@
-
 // ============================================================
 // SOLAR LEAD REPORTS — report.js (v4)
 // ============================================================
@@ -291,7 +290,7 @@ function renderCompanyWise() {
         <td><strong>${esc(name)}</strong></td>
         <td>${cnt}</td>
         <td>${total>0?((cnt/total)*100).toFixed(1):0}%</td>
-        <td><span class="drill-link" onclick="drillCompany('${esc(name)}','${esc(companyMonth)}')">👥 Employees</span></td>
+        <td><span class="drill-link" data-company="${esc(name)}" onclick="drillCompany(this.dataset.company)">👥 Employees</span></td>
       </tr>`).join("")||noData(4)}</tbody>
     </table></div>
     <div class="section-sub-title">Month-wise Breakdown — All Time</div>
@@ -442,11 +441,11 @@ function renderBillRanges() {
 }
 
 // ── DRILL-DOWN: Company → Employee list (month-scoped) ─────────
-function drillCompany(companyName, monthFilter) {
-  // Use exact same filtered set that produced the table row
-  var src = leadsFor(monthFilter||companyMonth).filter(l=>(l.companyName||"Unknown")===companyName);
+function drillCompany(companyName) {
+  // Use current companyMonth filter — same scope as the table row
+  var src = leadsFor(companyMonth).filter(l=>(l.companyName||"Unknown")===companyName);
 
-  // Group strictly by empKey (code-first)
+  // Group strictly by empKey (code-first) to deduplicate name spelling variants
   var map={};
   src.forEach(function(l){
     var key=l.empKey;
@@ -456,41 +455,42 @@ function drillCompany(companyName, monthFilter) {
     if(l.status==="Installed") map[key].installed++;
   });
 
-  var rows =Object.values(map).sort((a,b)=>b.leads-a.leads);
-  var total=src.length;
+  var rows  = Object.values(map).sort((a,b)=>b.leads-a.leads);
+  var total = src.length;
+  var periodLabel = companyMonth!=="all" ? " · "+monthLabel(companyMonth) : "";
 
-  // Show modal (inline, no separate modal element needed — use a simple overlay div)
-  var overlay=document.getElementById("drillOverlay");
-  overlay.innerHTML=`
-    <div class="drill-box">
-      <div class="drill-header">
-        <div>
-          <div class="drill-title">${esc(companyName)}</div>
-          <div class="drill-sub">Employee Breakdown${monthFilter&&monthFilter!=="all"?" · "+monthLabel(monthFilter):""}</div>
-        </div>
-        <button class="drill-close" onclick="document.getElementById('drillOverlay').classList.add('hidden')">✕</button>
-      </div>
-      <div class="drill-stats">
-        <span>Total Leads: <strong>${total}</strong></span>
-        <span>Employees: <strong>${rows.length}</strong></span>
-      </div>
-      <div class="tbl-wrap"><table>
-        <thead><tr><th>Employee</th><th>Code</th><th>Branch</th><th>Leads</th><th>Share</th><th>Installed</th><th>Conv%</th></tr></thead>
-        <tbody>${rows.map(function(r){
-          var conv =r.leads>0?((r.installed/r.leads)*100).toFixed(0):0;
-          var share=total>0?((r.leads/total)*100).toFixed(1):0;
-          return `<tr>
-            <td><strong>${esc(r.name)}</strong></td>
-            <td><span class="emp-code">${esc(r.code)}</span></td>
-            <td>${esc(r.branch)}</td>
-            <td>${r.leads}</td><td>${share}%</td>
-            <td>${r.installed}</td><td>${conv}%</td>
-          </tr>`;
-        }).join("")||noData(7)}</tbody>
-      </table></div>
-    </div>`;
-  overlay.classList.remove("hidden");
-  overlay.onclick=function(e){ if(e.target===overlay) overlay.classList.add("hidden"); };
+  // Populate existing modal elements from report.html
+  document.getElementById("drillTitle").textContent = companyName + " — Employees" + periodLabel;
+  document.getElementById("drillBody").innerHTML = `
+    <div class="drill-summary">
+      <span>Total Leads: <strong>${total}</strong></span>
+      <span>Employees Active: <strong>${rows.length}</strong></span>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Employee</th><th>Code</th><th>Branch</th>
+        <th>Leads</th><th>Share</th><th>Installed</th><th>Conv%</th>
+      </tr></thead>
+      <tbody>${rows.map(function(r){
+        var conv  = r.leads>0?((r.installed/r.leads)*100).toFixed(0):0;
+        var share = total>0?((r.leads/total)*100).toFixed(1):0;
+        return `<tr>
+          <td><strong>${esc(r.name)}</strong></td>
+          <td><span class="emp-code">${esc(r.code)}</span></td>
+          <td>${esc(r.branch)}</td>
+          <td>${r.leads}</td>
+          <td>${share}%</td>
+          <td>${r.installed}</td>
+          <td>${conv}%</td>
+        </tr>`;
+      }).join("")||noData(7)}</tbody>
+    </table></div>`;
+
+  document.getElementById("drillModal").classList.remove("hidden");
+}
+
+function closeDrill() {
+  document.getElementById("drillModal").classList.add("hidden");
 }
 
 // ── BAR CHART ─────────────────────────────────────────────────
